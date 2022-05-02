@@ -4,15 +4,11 @@
 
 namespace Microsoft.Teams.Apps.DLLookup.Authentication
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
     using System.Net.Http.Headers;
-    using System.Threading.Tasks;
-    using Microsoft.AspNetCore.Authentication.AzureAD.UI;
     using Microsoft.AspNetCore.Authentication.JwtBearer;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Identity.Web;
     using Microsoft.IdentityModel.Tokens;
     using Microsoft.Teams.Apps.DLLookup.Helpers;
 
@@ -44,30 +40,28 @@ namespace Microsoft.Teams.Apps.DLLookup.Authentication
         {
             AuthenticationServiceCollectionExtensions.ValidateAuthenticationConfigurationSettings(configuration);
 
-            services.AddAuthentication(options => { options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme; })
-                .AddJwtBearer(options =>
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApi(configuration, "AzureAd", JwtBearerDefaults.AuthenticationScheme);
+
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                var azureADOptions = new AzureADOptions();
-                configuration.Bind("AzureAd", azureADOptions);
-                options.Authority = $"{azureADOptions.Instance}{azureADOptions.TenantId}/v2.0";
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidAudiences = AuthenticationServiceCollectionExtensions.GetValidAudiences(configuration),
                     ValidIssuers = AuthenticationServiceCollectionExtensions.GetValidIssuers(configuration),
                     AudienceValidator = AuthenticationServiceCollectionExtensions.AudienceValidator,
                 };
-                options.Events = new JwtBearerEvents
-                {
-                    OnTokenValidated = async context =>
-                    {
-                        var tokenAcquisition = context.HttpContext.RequestServices.GetRequiredService<TokenAcquisitionHelper>();
-                        context.Success();
 
-                        // Adds the token to the cache, and also handles the incremental consent and claim challenges
-                        var jwtToken = AuthenticationHeaderValue.Parse(context.Request.Headers["Authorization"].ToString()).Parameter;
-                        await tokenAcquisition.AddTokenToCacheFromJwtAsync(configuration[AuthenticationServiceCollectionExtensions.GraphScopeConfigurationSettingsKey], jwtToken);
-                        await Task.FromResult(0);
-                    },
+                var existingOnTokenValidatedHandler = options.Events.OnTokenValidated;
+                options.Events.OnTokenValidated = async context =>
+                {
+                    var tokenAcquisition = context.HttpContext.RequestServices.GetRequiredService<TokenAcquisitionHelper>();
+                    context.Success();
+
+                    // Adds the token to the cache, and also handles the incremental consent and claim challenges
+                    var jwtToken = AuthenticationHeaderValue.Parse(context.Request.Headers["Authorization"].ToString()).Parameter;
+                    await tokenAcquisition.AddTokenToCacheFromJwtAsync(configuration[AuthenticationServiceCollectionExtensions.GraphScopeConfigurationSettingsKey], jwtToken);
+                    await Task.FromResult(0);
                 };
             });
         }

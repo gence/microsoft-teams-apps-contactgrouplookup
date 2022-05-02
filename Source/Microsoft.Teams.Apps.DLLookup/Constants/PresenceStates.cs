@@ -9,7 +9,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Constants
     /// Refer the list of base presence information https://docs.microsoft.com/en-us/graph/api/resources/presence?view=graph-rest-beta#properties
     /// Possible values are Available, AvailableIdle, Away, BeRightBack, Busy, BusyIdle, DoNotDisturb, Offline, PresenceUnknown
     /// </summary>
-    public class PresenceStates
+    public static class PresenceStates
     {
         /// <summary>
         /// Represents available presence state

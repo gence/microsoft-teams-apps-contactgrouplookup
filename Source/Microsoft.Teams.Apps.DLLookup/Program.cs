@@ -2,53 +2,77 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
-namespace Microsoft.Teams.Apps.DLLookup
+using Microsoft.Identity.Client;
+using Microsoft.Teams.Apps.DLLookup.Authentication;
+using Microsoft.Teams.Apps.DLLookup.Helpers;
+using Microsoft.Teams.Apps.DLLookup.Helpers.Extentions;
+using Microsoft.Teams.Apps.DLLookup.Models;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+var scopes = builder.Configuration["AzureAd:GraphScope"].Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
+IConfidentialClientApplication confidentialClientApp = ConfidentialClientApplicationBuilder.Create(builder.Configuration["AzureAd:ClientId"])
+    .WithClientSecret(builder.Configuration["AzureAd:ClientSecret"])
+    .Build();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<IConfidentialClientApplication>(confidentialClientApp);
+builder.Services.AddDLLookupAuthentication(builder.Configuration);
+builder.Services.AddSingleton<TokenAcquisitionHelper>();
+builder.Services.AddSession();
+builder.Services.AddMvc().AddSessionStateTempDataProvider();
+builder.Services.AddApplicationInsightsTelemetry(builder.Configuration["ApplicationInsights:InstrumentationKey"]);
+
+builder.Services.Configure<StorageOptions>(options =>
 {
-    using System;
-    using Microsoft.AspNetCore;
-    using Microsoft.AspNetCore.Hosting;
-    using Microsoft.Extensions.Configuration;
-    using Microsoft.Extensions.Logging;
+    options.ConnectionString = builder.Configuration.GetValue<string>("Storage:ConnectionString");
+});
 
-    /// <summary>
-    /// Default Program class.
-    /// </summary>
-    public class Program
-    {
-        /// <summary>
-        /// Default Main method.
-        /// </summary>
-        /// <param name="args">string array input parameters.</param>
-        public static void Main(string[] args)
-        {
-            CreateWebHostBuilder(args).Build().Run();
-        }
+builder.Services.Configure<Microsoft.Teams.Apps.DLLookup.Models.CacheOptions>(options =>
+{
+    options.CacheInterval = builder.Configuration.GetValue<int>("CacheInterval");
+});
 
-        /// <summary>
-        /// Method to create default builder.
-        /// </summary>
-        /// <param name="args">string input parameter from Main method.</param>
-        /// <returns>Calls Startup method.</returns>
-        public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
-            WebHost.CreateDefaultBuilder(args)
-             .ConfigureAppConfiguration((hostingContext, config) =>
-             {
-                 config.AddEnvironmentVariables();
-             })
-                .UseStartup<Startup>()
-            .ConfigureLogging((hostingContext, logging) =>
-            {
-                // hostingContext.HostingEnvironment can be used to determine environments as well.
-                var appInsightKey = hostingContext.Configuration["ApplicationInsights:InstrumentationKey"];
-                logging.AddApplicationInsights(appInsightKey);
+builder.Services.Configure<AzureAdOptions>(options =>
+{
+    options.ClientId = builder.Configuration.GetValue<string>("AzureAd:ClientId");
+    options.ClientSecret = builder.Configuration.GetValue<string>("AzureAd:ClientSecret");
+    options.GraphScope = builder.Configuration.GetValue<string>("AzureAd:GraphScope");
+    options.TenantId = builder.Configuration.GetValue<string>("AzureAd:TenantId");
+});
 
-                // This will capture Info level traces and above.
-                if (!Enum.TryParse(hostingContext.Configuration["ApplicationInsights:LogLevel:Default"], out LogLevel logLevel))
-                {
-                    logLevel = LogLevel.Information;
-                }
+builder.Services.AddRepositories();
+builder.Services.AddHttpClient();
 
-                logging.AddFilter<Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider>(string.Empty, logLevel);
-            });
-    }
+var app = builder.Build();
+
+app.UseSession();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
 }
+else
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseStaticFiles();
+
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
+});
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller}/{action=Index}/{id?}");
+
+app.MapFallbackToFile("index.html");
+
+app.Run();

@@ -43,16 +43,16 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// <summary>
         /// Creates/Updates favorite distribution list data in table storage.
         /// </summary>
-        /// <param name="favoriteDistributionListData">Instance of favoriteDistributionListData.</param>
+        /// <param name="favoriteDistributionList">Instance of favoriteDistributionListData.</param>
         /// <returns>Returns data model.</returns>
         public async Task CreateOrUpdateFavoriteDistributionListAsync(
-           FavoriteDistributionListData favoriteDistributionListData)
+           FavoriteDistributionListData favoriteDistributionList)
         {
             FavoriteDistributionListTableEntity favoriteDistributionListDataEntity = new FavoriteDistributionListTableEntity()
             {
-                GroupId = favoriteDistributionListData.Id,
-                PinStatus = favoriteDistributionListData.IsPinned,
-                UserObjectId = favoriteDistributionListData.UserObjectId,
+                GroupId = favoriteDistributionList.Id,
+                PinStatus = favoriteDistributionList.IsPinned,
+                UserObjectId = favoriteDistributionList.UserObjectId,
             };
 
             await this.AddFavoriteDistributionListToStorageAsync(favoriteDistributionListDataEntity);

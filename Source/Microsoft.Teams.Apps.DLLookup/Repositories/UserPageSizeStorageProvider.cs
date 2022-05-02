@@ -68,7 +68,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<UserPageSizeChoiceTableEntity>(partitionKey.ToLower(), userObjectId.ToLower());
+                TableOperation operation = TableOperation.Retrieve<UserPageSizeChoiceTableEntity>(partitionKey.ToLowerInvariant(), userObjectId.ToLowerInvariant());
                 TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
                 return result.Result as UserPageSizeChoiceTableEntity;
             }

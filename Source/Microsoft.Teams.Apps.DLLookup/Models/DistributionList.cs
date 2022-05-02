@@ -4,7 +4,7 @@
 
 namespace Microsoft.Teams.Apps.DLLookup.Models
 {
-    using Newtonsoft.Json;
+    using System.Text.Json.Serialization;
 
     /// <summary>
     /// DistributionList model is for distribution lists data from AAD and table storage.
@@ -14,37 +14,37 @@ namespace Microsoft.Teams.Apps.DLLookup.Models
         /// <summary>
         /// Gets or sets the Id from AAD for a particular distribution list.
         /// </summary>
-        [JsonProperty("id")]
+        [JsonPropertyName("id")]
         public string Id { get; set; }
 
         /// <summary>
         /// Gets or sets the display name from AAD for a particular distribution list.
         /// </summary>
-        [JsonProperty("displayName")]
+        [JsonPropertyName("displayName")]
         public string DisplayName { get; set; }
 
         /// <summary>
         /// Gets or sets the mail from AAD for a particular distribution list.
         /// </summary>
-        [JsonProperty("mail")]
+        [JsonPropertyName("mail")]
         public string Mail { get; set; }
 
         /// <summary>
         /// Gets or sets the mail nickname from AAD for a particular distribution list.
         /// </summary>
-        [JsonProperty("mailNickname")]
+        [JsonPropertyName("mailNickname")]
         public string MailNickname { get; set; }
 
         /// <summary>
         /// Gets or sets the mail enabled from AAD for a particular distribution list.
         /// </summary>
-        [JsonProperty("mailEnabled")]
-        public string MailEnabled { get; set; }
+        [JsonPropertyName("mailEnabled")]
+        public bool? MailEnabled { get; set; }
 
         /// <summary>
         /// Gets or sets the number of members in a particular distribution list.
         /// </summary>
-        [JsonProperty("noOfMembers")]
+        [JsonPropertyName("noOfMembers")]
         public int MembersCount { get; set; }
     }
 }

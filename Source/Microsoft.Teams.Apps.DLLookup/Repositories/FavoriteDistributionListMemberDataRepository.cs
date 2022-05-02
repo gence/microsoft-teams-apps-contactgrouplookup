@@ -45,7 +45,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             FavoriteDistributionListMemberTableEntity favoriteDistributionListMemberDataEntity = new FavoriteDistributionListMemberTableEntity()
             {
-                DistributionListMemberId = (favoriteDistributionListMemberData.PinnedUserId + favoriteDistributionListMemberData.DistributionListId).ToLower(),
+                DistributionListMemberId = (favoriteDistributionListMemberData.PinnedUserId + favoriteDistributionListMemberData.DistributionListId).ToLowerInvariant(),
                 DistributionListId = favoriteDistributionListMemberData.DistributionListId,
                 UserObjectId = favoriteDistributionListMemberData.UserObjectId,
             };

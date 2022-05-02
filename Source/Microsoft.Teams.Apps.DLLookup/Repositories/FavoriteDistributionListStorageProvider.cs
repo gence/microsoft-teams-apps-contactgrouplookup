@@ -110,7 +110,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<FavoriteDistributionListTableEntity>(userObjectId, favoriteDistributionListDataId.ToLower());
+                TableOperation operation = TableOperation.Retrieve<FavoriteDistributionListTableEntity>(userObjectId, favoriteDistributionListDataId.ToLowerInvariant());
                 TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
                 return result.Result as FavoriteDistributionListTableEntity;
             }

@@ -4,21 +4,16 @@
 
 namespace Microsoft.Teams.Apps.DLLookup.Helpers
 {
-    extern alias BetaLib;
-
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Net.Http.Headers;
+    using System.Text.Json;
+    using System.Text.Json.Nodes;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Graph;
     using Microsoft.Teams.Apps.DLLookup.Models;
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Linq;
-#pragma warning disable SA1135 // Application requires both Graph v1.0 and beta SDKs which needs to add extern reference. More details can be found here : https://github.com/microsoftgraph/msgraph-beta-sdk-dotnet
-    using Beta = BetaLib.Microsoft.Graph;
-#pragma warning restore SA1135 // Application requires both Graph v1.0 and beta SDKs which needs to add extern reference. More details can be found here : https://github.com/microsoftgraph/msgraph-beta-sdk-dotnet
 
     /// <summary>
     /// This class will contain Graph SDK read and write operations.
@@ -26,7 +21,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
     public class GraphUtilityHelper
     {
         private readonly GraphServiceClient graphClient;
-        private readonly Beta.GraphServiceClient graphClientBeta;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphUtilityHelper"/> class.
@@ -35,18 +29,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
         public GraphUtilityHelper(string accessToken)
         {
             this.graphClient = new GraphServiceClient(
-                new DelegateAuthenticationProvider(
-                    async (requestMessage) =>
-                    {
-                        await Task.Run(() =>
-                        {
-                            requestMessage.Headers.Authorization = new AuthenticationHeaderValue(
-                                "Bearer",
-                                accessToken);
-                        });
-                    }));
-
-            this.graphClientBeta = new Beta.GraphServiceClient(
                 new DelegateAuthenticationProvider(
                     async (requestMessage) =>
                     {
@@ -81,7 +63,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                        Id = e.Id,
                        DisplayName = e.DisplayName,
                        Mail = e.Mail,
-                       MailEnabled = e.MailEnabled.ToString(),
+                       MailEnabled = e.MailEnabled,
                        MailNickname = e.MailNickname,
                    });
 
@@ -115,7 +97,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                     {
                         UserObjectId = e.Id,
                         DisplayName = e.DisplayName,
-                        OData_Type = e.ODataType,
+                        ODataType = e.ODataType,
                         UserType = "Member",
                         Mail = e.Mail,
                         UserPrincipalName = e.UserPrincipalName,
@@ -128,7 +110,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                     {
                         UserObjectId = e.Id,
                         DisplayName = e.DisplayName,
-                        OData_Type = e.ODataType,
+                        ODataType = e.ODataType,
                         Mail = e.Mail,
                     }).ToList();
 
@@ -160,7 +142,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
 
                 foreach (string userId in userIds)
                 {
-                    var request = this.graphClientBeta
+                    var request = this.graphClient
                         .Users[userId]
                         .Presence
                         .Request();
@@ -168,7 +150,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                     batchIds.Add(batchRequestContent.AddBatchRequestStep(request));
                 }
 
-                var returnedResponse = await this.graphClientBeta.Batch.Request().PostAsync(batchRequestContent);
+                var returnedResponse = await this.graphClient.Batch.Request().PostAsync(batchRequestContent);
                 for (int i = 0; i < batchIds.Count; i++)
                 {
                     peoplePresenceResults.Add(await returnedResponse.GetResponseByIdAsync<PeoplePresenceData>(batchIds[i]));
@@ -227,7 +209,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                 {
                     distributionBatchList.Add(await returnedResponse.GetResponseByIdAsync<DistributionList>(batchIdGroups[i]));
                     var dlMemberData = await returnedResponse.GetResponseByIdAsync<dynamic>(batchIdMembers[i]);
-                    List<DistributionListMember> dlMemberList = this.ParseJsonValue(JsonConvert.SerializeObject(dlMemberData));
+                    JsonObject obj = JsonObject.Create(dlMemberData);
+                    List<DistributionListMember> dlMemberList = obj["value"].AsArray().Deserialize<List<DistributionListMember>>();
 
                     distributionBatchList[i].MembersCount = dlMemberList
                         .Where(member => member.Type == "#microsoft.graph.user")
@@ -264,7 +247,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                     {
                         UserObjectId = e.Id,
                         DisplayName = e.DisplayName,
-                        OData_Type = e.ODataType,
+                        ODataType = e.ODataType,
                         UserType = "Member",
                         Mail = e.Mail,
                         UserPrincipalName = e.UserPrincipalName,
@@ -278,25 +261,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Helpers
                 logger.LogError(ex, $"An error occurred in GetMembersListAsync: {ex.Message}.");
                 throw;
             }
-        }
-
-        /// <summary>
-        /// Parse JSON string into distribution list member collection.
-        /// </summary>
-        /// <param name="json">Input JSON value.</param>
-        /// <returns>JSON value.</returns>
-        private List<DistributionListMember> ParseJsonValue(string json)
-        {
-            if (!string.IsNullOrEmpty(json))
-            {
-                JObject parsedResult = JObject.Parse(json);
-                if (parsedResult["value"] != null)
-                {
-                    return parsedResult["value"].ToObject<List<DistributionListMember>>();
-                }
-            }
-
-            return null;
         }
     }
 }

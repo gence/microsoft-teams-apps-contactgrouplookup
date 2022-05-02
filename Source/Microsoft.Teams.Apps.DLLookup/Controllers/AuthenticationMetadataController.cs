@@ -68,7 +68,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// </summary>
         /// <returns>Application client Id.</returns>
         [HttpGet("GetClientId")]
-        public string GetClientId()
+        public string FetchClientId()
         {
             return this.clientId;
         }

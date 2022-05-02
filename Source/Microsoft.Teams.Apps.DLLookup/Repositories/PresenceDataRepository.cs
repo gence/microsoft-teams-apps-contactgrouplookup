@@ -4,8 +4,6 @@
 
 namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
-    extern alias BetaLib;
-
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;

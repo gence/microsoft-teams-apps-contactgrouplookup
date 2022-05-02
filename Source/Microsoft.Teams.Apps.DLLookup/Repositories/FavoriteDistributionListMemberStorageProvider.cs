@@ -111,7 +111,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<FavoriteDistributionListMemberTableEntity>(userObjectId, pinnedDistributionListId.ToLower());
+                TableOperation operation = TableOperation.Retrieve<FavoriteDistributionListMemberTableEntity>(userObjectId, pinnedDistributionListId.ToLowerInvariant());
                 TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
                 return result.Result as FavoriteDistributionListMemberTableEntity;
             }
