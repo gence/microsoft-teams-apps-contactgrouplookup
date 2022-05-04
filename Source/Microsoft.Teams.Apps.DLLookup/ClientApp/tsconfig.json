@@ -1,7 +1,7 @@
 {
-  "compileOnSave": false,
+  "compileOnSave": true,
   "compilerOptions": {
-    "target": "es5",
+    "target": "ES6",
     "lib": [
       "dom",
       "dom.iterable",
@@ -18,6 +18,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "noImplicitAny": false,
+    "sourceMap": true,
     "jsx": "preserve"
   },
   "include": [

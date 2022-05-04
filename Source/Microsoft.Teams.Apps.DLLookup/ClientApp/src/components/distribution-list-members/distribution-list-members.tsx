@@ -532,7 +532,7 @@ class DistributionListMembers extends React.Component<IDistributionListMembersPr
         let pageSize = [20, 50, 100];
         let pageNumber: number = this.state.activePage;
         let index = pageSize.indexOf(this.state.pageSize);
-        let items = []; //Populate grid
+        let items: JSX.Element[] = []; //Populate grid
 
         for (let j: number = pageNumber * this.state.pageSize; j < (pageNumber * this.state.pageSize) + this.state.pageSize; j++) {
             //#region Populate Grid
@@ -612,15 +612,15 @@ class DistributionListMembers extends React.Component<IDistributionListMembersPr
             }
         }
 
-        let segmentRows = []; //Populate grid
+        let segmentRows: JSX.Element[] = []; //Populate grid
         if (this.state.loader) {
             segmentRows.push(<Segment styles={{ gridColumn: 'span 5', }}>< Loader /></Segment >);
         }
         else {
-            segmentRows.push(items);
+            segmentRows.push(...items);
         }
 
-        let navigation = [];
+        let navigation: JSX.Element[] = [];
         if (this.props.parentDLName) {
 
             const groups = this.props.parentDLName.split('>');

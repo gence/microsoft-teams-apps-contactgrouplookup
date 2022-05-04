@@ -30,7 +30,9 @@ export class AxiosJWTDecorator {
         try {
             config = await this.setupAuthorizationHeader(config);
             if (data) {
-                config.headers["Content-Type"] = 'application/json; charset=utf-8';
+                if (config.headers) {
+                    config.headers["Content-Type"] = 'application/json; charset=utf-8';
+                }
                 config.data = data;
             }
             return await axios.delete(url, config);
@@ -93,9 +95,13 @@ export class AxiosJWTDecorator {
             const authTokenRequest = {
                 successCallback: (token: string) => {
                     if (!config) {
-                        config = axios.defaults;
+                        config = {
+                            headers : { }
+                        };
+                    };
+                    if (config.headers) {
+                        config.headers["Authorization"] = `Bearer ${token}`;
                     }
-                    config.headers["Authorization"] = `Bearer ${token}`;
                     resolve(config);
                 },
                 failureCallback: (error: string) => {

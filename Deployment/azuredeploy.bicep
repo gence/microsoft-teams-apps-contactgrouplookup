@@ -161,6 +161,10 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
           name: 'ApplicationInsights:LogLevel:Default'
           value: 'Information'
         }
+        {
+          name: 'WEBSITE_NODE_DEFAULT_VERSION'
+          value: '~16'
+        }
       ]
       cors: {
         supportCredentials: true

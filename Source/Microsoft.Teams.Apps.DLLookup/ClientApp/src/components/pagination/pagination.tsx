@@ -24,7 +24,8 @@ class Pagination extends React.Component<IPaginationProps, {}> {
         const numberOfPages = Math.ceil(this.props.entitiesLength / this.props.numberOfContents);//Total Page count
 
         //#region Populate paging List
-        let pagingItems = []
+        let pagingItems: { key: string, header: string }[] = []
+
         pagingItems.push({
             key: "<",
             header: "<",
@@ -32,8 +33,8 @@ class Pagination extends React.Component<IPaginationProps, {}> {
 
         for (let k = 0; k < numberOfPages; k++) {
             pagingItems.push({
-                key: k,
-                header: k + 1,
+                key: k.toString(),
+                header: (k + 1).toString(),
             });
         }
         pagingItems.push({

@@ -452,7 +452,7 @@ class DistributionLists extends React.Component<IDistributionListsProps, IDistri
         //Page size drop down values.
         const pageSize = [20, 50, 100];
         let index = pageSize.indexOf(this.state.pageSize);
-        let items = []; //Populate grid items
+        let items: JSX.Element[] = []; //Populate grid items
         for (let j: number = this.state.activePage * this.state.pageSize; j < (this.state.activePage * this.state.pageSize) + this.state.pageSize; j++)  // 20 is records per page
         {
             if (j >= this.state.distributionLists.length) // If it crosses last record
@@ -486,12 +486,12 @@ class DistributionLists extends React.Component<IDistributionListsProps, IDistri
             </Segment>)
         }
 
-        let segmentRows = []; //Populate grid 
+        let segmentRows: JSX.Element[] = []; //Populate grid 
         if (this.state.loader) {
             segmentRows.push(<Segment styles={{ gridColumn: 'span 5', }}>< Loader /></Segment >);
         }
         else {
-            segmentRows.push(items);
+            segmentRows.push(...items);
         }
 
         if (!this.state.loader && this.state.distributionLists.length === 0 && this.state.masterDistributionLists.length === 0)// If there are no favorites saved
