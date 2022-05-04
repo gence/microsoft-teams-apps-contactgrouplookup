@@ -155,7 +155,7 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'Storage:ConnectionString'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccount.id, '2021-08-01').key1}'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccount.id, '2021-08-01').keys[0].value}'
         }
         {
           name: 'ApplicationInsights:LogLevel:Default'
