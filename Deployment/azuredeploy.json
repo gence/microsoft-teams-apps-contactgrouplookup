@@ -1,6 +1,13 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.5.6.12127",
+      "templateHash": "17328959554858582502"
+    }
+  },
   "parameters": {
     "baseResourceName": {
       "type": "string",
@@ -11,14 +18,14 @@
     },
     "appClientId": {
       "type": "string",
-      "minLength": 36,
       "maxLength": 36,
+      "minLength": 36,
       "metadata": {
         "description": "The client ID of the Azure AD app, e.g., 123e4567-e89b-12d3-a456-426655440000."
       }
     },
     "appClientSecret": {
-      "type": "securestring",
+      "type": "secureString",
       "minLength": 1,
       "metadata": {
         "description": "The client secret of the Azure AD app."
@@ -26,11 +33,11 @@
     },
     "customDomainOption": {
       "type": "string",
+      "defaultValue": "Azure Front Door",
       "allowedValues": [
         "Custom domain name (recommended)",
         "Azure Front Door"
       ],
-      "defaultValue": "Azure Front Door",
       "metadata": {
         "description": "How the app will be hosted on a domain that is not *.azurewebsites.net. Azure Front Door is an easy option that the template can set up automatically, but it comes with ongoing monthly costs. "
       }
@@ -38,34 +45,34 @@
     "tenantId": {
       "type": "string",
       "defaultValue": "[subscription().tenantId]",
-      "minLength": 1,
       "maxLength": 36,
+      "minLength": 1,
       "metadata": {
         "description": "The ID of the tenant to which the app will be deployed."
       }
     },
     "sku": {
       "type": "string",
+      "defaultValue": "Standard",
       "allowedValues": [
         "Basic",
         "Standard",
         "Premium"
       ],
-      "defaultValue": "Standard",
       "metadata": {
         "description": "The pricing tier for the hosting plan."
       }
     },
     "planSize": {
       "type": "string",
+      "defaultValue": "2",
       "allowedValues": [
         "1",
         "2",
         "3"
       ],
-      "defaultValue": "2",
       "metadata": {
-        "description": "The size of the hosting plan (small, medium, or large)."
+        "description": "The size of the hosting plan (small = 1, medium = 2, or large = 3)."
       }
     },
     "location": {
@@ -77,17 +84,17 @@
     },
     "gitRepoUrl": {
       "type": "string",
+      "defaultValue": "https://github.com/gence/microsoft-teams-app-contactgrouplookup.git",
       "metadata": {
         "description": "The URL to the GitHub repository to deploy."
-      },
-      "defaultValue": "https://github.com/OfficeDev/microsoft-teams-app-contactgrouplookup.git"
+      }
     },
     "gitBranch": {
       "type": "string",
+      "defaultValue": "master",
       "metadata": {
         "description": "The branch of the GitHub repository to deploy."
-      },
-      "defaultValue": "master"
+      }
     },
     "cacheInterval": {
       "type": "int",
@@ -98,14 +105,15 @@
     }
   },
   "variables": {
-    "uniqueString": "[uniquestring(subscription().subscriptionId, resourceGroup().id, parameters('baseResourceName'))]",
+    "uniqueHash": "[uniqueString(subscription().subscriptionId, resourceGroup().id, parameters('baseResourceName'))]",
     "appName": "[parameters('baseResourceName')]",
-    "appDomain": "[concat(variables('appName'), '.azurewebsites.net')]",
-    "appUrl": "[concat('https://', variables('appDomain'))]",
-    "frontDoorDomain": "[concat(variables('appName'), '.azurefd.net')]",
+    "appDomain": "[format('{0}.azurewebsites.net', variables('appName'))]",
+    "appUrl": "[format('https://{0}', variables('appDomain'))]",
+    "frontDoorDomain": "[format('{0}.azurefd.net', variables('appName'))]",
     "hostingPlanName": "[parameters('baseResourceName')]",
-    "storageAccountName": "[variables('uniqueString')]",
+    "storageAccountName": "[format('{0}{1}', substring(parameters('baseResourceName'), 0, 11), variables('uniqueHash'))]",
     "appInsightsName": "[parameters('baseResourceName')]",
+    "logAnalyticsName": "[parameters('baseResourceName')]",
     "useFrontDoor": "[equals(parameters('customDomainOption'), 'Azure Front Door')]",
     "frontDoorName": "[parameters('baseResourceName')]",
     "sharedSkus": [
@@ -117,45 +125,37 @@
   },
   "resources": [
     {
-      "apiVersion": "2018-02-01",
-      "kind": "Storage",
-      "location": "[parameters('location')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2021-08-01",
       "name": "[variables('storageAccountName')]",
+      "kind": "StorageV2",
+      "location": "[parameters('location')]",
       "sku": {
         "name": "Standard_LRS"
       },
-      "type": "Microsoft.Storage/storageAccounts"
+      "properties": {
+        "minimumTlsVersion": "TLS1_2"
+      }
     },
     {
-      "apiVersion": "2016-09-01",
-      "location": "[parameters('location')]",
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2021-03-01",
       "name": "[variables('hostingPlanName')]",
-      "properties": {
-        "name": "[variables('hostingPlanName')]",
-        "hostingEnvironment": "",
-        "numberOfWorkers": 1
-      },
+      "location": "[parameters('location')]",
       "sku": {
-        "name": "[if(variables('isSharedPlan'), concat(variables('skuFamily'),'1'), concat(variables('skuFamily'),parameters('planSize')))]",
+        "name": "[if(variables('isSharedPlan'), format('{0}1', variables('skuFamily')), format('{0}{1}', variables('skuFamily'), parameters('planSize')))]",
         "tier": "[parameters('sku')]",
-        "size": "[concat(variables('skuFamily'), parameters('planSize'))]",
+        "size": "[format('{0}{1}', variables('skuFamily'), parameters('planSize'))]",
         "family": "[variables('skuFamily')]",
         "capacity": 0
-      },
-      "type": "Microsoft.Web/serverfarms"
+      }
     },
     {
-      "apiVersion": "2016-08-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('Microsoft.Insights/components/', variables('appInsightsName'))]"
-      ],
-      "kind": "app",
-      "location": "[parameters('location')]",
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2021-03-01",
       "name": "[variables('appName')]",
+      "location": "[parameters('location')]",
       "properties": {
-        "name": "[variables('appName')]",
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "enabled": true,
         "reserved": false,
@@ -168,10 +168,6 @@
         "siteConfig": {
           "alwaysOn": true,
           "appSettings": [
-            {
-              "name": "SITE_ROLE",
-              "value": "app"
-            },
             {
               "name": "AzureAd:Instance",
               "value": "https://login.microsoftonline.com/"
@@ -190,7 +186,7 @@
             },
             {
               "name": "AzureAd:ApplicationIdURI",
-              "value": "[concat('api://',variables('frontDoorDomain'),'/',parameters('appClientId'))]"
+              "value": "[format('api://{0}/{1}', variables('frontDoorDomain'), parameters('appClientId'))]"
             },
             {
               "name": "AzureAd:ValidIssuers",
@@ -202,77 +198,98 @@
             },
             {
               "name": "CacheInterval",
-              "value": "[parameters('cacheInterval')]"
+              "value": "[format('{0}', parameters('cacheInterval'))]"
             },
             {
               "name": "ApplicationInsights:InstrumentationKey",
-              "value": "[reference(resourceId('Microsoft.Insights/components/', variables('appInsightsName')), '2015-05-01').InstrumentationKey]"
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
+            },
+            {
+              "name": "ApplicationInsights:ConnectionString",
+              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
             },
             {
               "name": "Storage:ConnectionString",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').key1)]"
             },
             {
               "name": "ApplicationInsights:LogLevel:Default",
               "value": "Information"
-            },
-            {
-              "name": "ApplicationInsights:LogLevel:Microsoft",
-              "value": "Information"
-            },
-            {
-              "name": "WEBSITE_NODE_DEFAULT_VERSION",
-              "value": "10.15.2"
             }
           ],
           "cors": {
             "supportCredentials": true,
             "allowedOrigins": [
-              "[concat('https://', variables('frontDoorDomain'))]"
+              "[format('https://{0}', variables('frontDoorDomain'))]"
             ]
-          }
+          },
+          "ftpsState": "Disabled",
+          "minTlsVersion": "1.2",
+          "netFrameworkVersion": "v6.0",
+          "scmMinTlsVersion": "1.2",
+          "use32BitWorkerProcess": false
         }
       },
-      "resources": [
-        {
-          "apiVersion": "2016-08-01",
-          "name": "web",
-          "type": "sourcecontrols",
-          "condition": "[not(empty(parameters('gitRepoUrl')))]",
-          "dependsOn": [
-            "[resourceId('Microsoft.Web/sites', variables('appName'))]"
-          ],
-          "properties": {
-            "RepoUrl": "[parameters('gitRepoUrl')]",
-            "branch": "[parameters('gitBranch')]",
-            "IsManualIntegration": true
-          }
-        }
-      ],
-      "type": "Microsoft.Web/sites"
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
     },
     {
-      "apiVersion": "2015-05-01",
-      "name": "[variables('appInsightsName')]",
-      "type": "Microsoft.Insights/components",
-      "location": "[parameters('location')]",
-      "tags": {
-        "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('appName'))]": "Resource"
-      },
+      "condition": "[not(empty(parameters('gitRepoUrl')))]",
+      "type": "Microsoft.Web/sites/sourcecontrols",
+      "apiVersion": "2021-03-01",
+      "name": "[format('{0}/{1}', variables('appName'), 'web')]",
       "properties": {
-        "Application_Type": "web",
-        "Request_Source": "rest"
+        "repoUrl": "[parameters('gitRepoUrl')]",
+        "branch": "[parameters('gitBranch')]",
+        "isManualIntegration": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('appName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2021-06-01",
+      "name": "[variables('logAnalyticsName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 90,
+        "workspaceCapping": {
+          "dailyQuotaGb": 1
+        }
       }
     },
     {
-      "apiVersion": "2019-04-01",
-      "type": "Microsoft.Network/frontDoors",
-      "name": "[variables('frontDoorName')]",
-      "condition": "[variables('useFrontDoor')]",
-      "location": "Global",
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[variables('appInsightsName')]",
+      "kind": "web",
+      "location": "[parameters('location')]",
+      "tags": {
+        "[format('hidden-link:{0}/providers/Microsoft.Web/sites/{1}', resourceGroup().id, variables('appName'))]": "Resource"
+      },
+      "properties": {
+        "Application_Type": "web",
+        "Request_Source": "rest",
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      },
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('appName'))]"
-      ],
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      ]
+    },
+    {
+      "condition": "[variables('useFrontDoor')]",
+      "type": "Microsoft.Network/frontDoors",
+      "apiVersion": "2020-05-01",
+      "name": "[variables('frontDoorName')]",
+      "location": "Global",
       "properties": {
         "backendPools": [
           {
@@ -294,8 +311,7 @@
               },
               "loadBalancingSettings": {
                 "id": "[resourceId('Microsoft.Network/frontDoors/loadBalancingSettings', variables('frontDoorName'), 'loadBalancingSettings1')]"
-              },
-              "resourceState": "Enabled"
+              }
             }
           }
         ],
@@ -305,8 +321,7 @@
             "properties": {
               "intervalInSeconds": 255,
               "path": "/health",
-              "protocol": "Https",
-              "resourceState": "Enabled"
+              "protocol": "Https"
             }
           }
         ],
@@ -315,8 +330,7 @@
             "name": "frontendEndpoint1",
             "properties": {
               "hostName": "[variables('frontDoorDomain')]",
-              "sessionAffinityEnabledState": "Disabled",
-              "sessionAffinityTtlSeconds": 0
+              "sessionAffinityEnabledState": "Disabled"
             }
           }
         ],
@@ -358,7 +372,10 @@
         ],
         "enabledState": "Enabled",
         "friendlyName": "[variables('frontDoorName')]"
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('appName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -367,8 +384,8 @@
       "value": "[parameters('appClientId')]"
     },
     "appDomain": {
-      "type":"string",
-      "value": "[if(variables('useFrontDoor'), variables('frontDoorDomain'), concat('Please create a custom domain name for ', variables('appDomain'), ' and use that in the manifest'))]"
+      "type": "string",
+      "value": "[if(variables('useFrontDoor'), variables('frontDoorDomain'), format('Please create a custom domain name for {0} and use that in the manifest', variables('appDomain')))]"
     }
   }
 }
