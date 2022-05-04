@@ -169,6 +169,12 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
         ]
       }
       ftpsState: 'Disabled'
+      metadata: [
+        {
+            name: 'CURRENT_STACK'
+            value: 'dotnetcore'
+        }
+      ]
       minTlsVersion: '1.2'
       netFrameworkVersion: 'v6.0'
       scmMinTlsVersion: '1.2'
