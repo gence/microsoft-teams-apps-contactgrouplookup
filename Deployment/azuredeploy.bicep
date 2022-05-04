@@ -44,7 +44,7 @@ param planSize string = '2'
 param location string = resourceGroup().location
 
 @description('The URL to the GitHub repository to deploy.')
-param gitRepoUrl string = 'https://github.com/gence/microsoft-teams-app-contactgrouplookup.git'
+param gitRepoUrl string = 'https://github.com/gence/microsoft-teams-apps-contactgrouplookup.git'
 
 @description('The branch of the GitHub repository to deploy.')
 param gitBranch string = 'master'

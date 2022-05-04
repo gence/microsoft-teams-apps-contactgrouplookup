@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.5.6.12127",
-      "templateHash": "7410186676775990089"
+      "templateHash": "5134918307637709262"
     }
   },
   "parameters": {
@@ -84,7 +84,7 @@
     },
     "gitRepoUrl": {
       "type": "string",
-      "defaultValue": "https://github.com/gence/microsoft-teams-app-contactgrouplookup.git",
+      "defaultValue": "https://github.com/gence/microsoft-teams-apps-contactgrouplookup.git",
       "metadata": {
         "description": "The URL to the GitHub repository to deploy."
       }
