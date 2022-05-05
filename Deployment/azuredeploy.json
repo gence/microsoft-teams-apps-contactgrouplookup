@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.6.1.6515",
-      "templateHash": "229660461975330318"
+      "templateHash": "1400471290613423521"
     }
   },
   "parameters": {
@@ -114,6 +114,7 @@
     "storageAccountName": "[format('{0}{1}', substring(parameters('baseResourceName'), 0, 11), variables('uniqueHash'))]",
     "appInsightsName": "[parameters('baseResourceName')]",
     "logAnalyticsName": "[parameters('baseResourceName')]",
+    "keyVaultName": "[parameters('baseResourceName')]",
     "useFrontDoor": "[equals(parameters('customDomainOption'), 'Azure Front Door')]",
     "frontDoorName": "[parameters('baseResourceName')]",
     "sharedSkus": [
@@ -155,6 +156,9 @@
       "apiVersion": "2021-03-01",
       "name": "[variables('appName')]",
       "location": "[parameters('location')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "enabled": true,
@@ -182,7 +186,7 @@
             },
             {
               "name": "AzureAd:ClientSecret",
-              "value": "[parameters('appClientSecret')]"
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=ClientSecret)', variables('keyVaultName'))]"
             },
             {
               "name": "AzureAd:ApplicationIdURI",
@@ -202,19 +206,23 @@
             },
             {
               "name": "ApplicationInsights:InstrumentationKey",
-              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey]"
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=AppInsightsKey)', variables('keyVaultName'))]"
             },
             {
               "name": "ApplicationInsights:ConnectionString",
-              "value": "[reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString]"
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=AppInsightsConnString)', variables('keyVaultName'))]"
             },
             {
               "name": "Storage:ConnectionString",
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').keys[0].value)]"
+              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=StorageConnString)', variables('keyVaultName'))]"
             },
             {
               "name": "ApplicationInsights:LogLevel:Default",
               "value": "Information"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "~16"
             }
           ],
           "cors": {
@@ -233,14 +241,13 @@
           "minTlsVersion": "1.2",
           "netFrameworkVersion": "v6.0",
           "scmMinTlsVersion": "1.2",
-          "use32BitWorkerProcess": false
+          "use32BitWorkerProcess": false,
+          "keyVaultReferenceIdentity": "SystemAssigned"
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+        "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
       ]
     },
     {
@@ -288,6 +295,100 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "accessPolicies": [
+          {
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', variables('appName')), '2021-03-01', 'full').identity.principalId]",
+            "permissions": {
+              "certificates": [],
+              "keys": [],
+              "secrets": [
+                "get"
+              ]
+            },
+            "tenantId": "[parameters('tenantId')]"
+          }
+        ],
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": false,
+        "enableSoftDelete": true,
+        "publicNetworkAccess": "Enabled",
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "softDeleteRetentionInDays": 90,
+        "tenantId": "[parameters('tenantId')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('appName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'AppInsightsConnString')]",
+      "properties": {
+        "attributes": {
+          "enabled": true
+        },
+        "value": "[format('{0}', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'AppInsightsKey')]",
+      "properties": {
+        "attributes": {
+          "enabled": true
+        },
+        "value": "[format('{0}', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'ClientSecret')]",
+      "properties": {
+        "attributes": {
+          "enabled": true
+        },
+        "value": "[parameters('appClientSecret')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2021-11-01-preview",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'StorageConnString')]",
+      "properties": {
+        "attributes": {
+          "enabled": true
+        },
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-08-01').keys[0].value)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
       ]
     },
     {

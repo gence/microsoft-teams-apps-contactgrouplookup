@@ -61,6 +61,7 @@ var hostingPlanName = baseResourceName
 var storageAccountName = '${substring(baseResourceName, 0, 11)}${uniqueHash}'
 var appInsightsName = baseResourceName
 var logAnalyticsName = baseResourceName
+var keyVaultName = baseResourceName
 var useFrontDoor = (customDomainOption == 'Azure Front Door')
 var frontDoorName = baseResourceName
 var sharedSkus = [
@@ -97,6 +98,9 @@ resource hostingPlan 'Microsoft.Web/serverfarms@2021-03-01' = {
 resource app 'Microsoft.Web/sites@2021-03-01' = {
   location: location
   name: appName
+  identity: {
+    type: 'SystemAssigned'
+  }
   dependsOn: [
     logAnalyticsWorkspace
   ]
@@ -127,7 +131,7 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'AzureAd:ClientSecret'
-          value: appClientSecret
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=ClientSecret)'
         }
         {
           name: 'AzureAd:ApplicationIdURI'
@@ -147,15 +151,15 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'ApplicationInsights:InstrumentationKey'
-          value: reference(appInsights.id, '2020-02-02').InstrumentationKey
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=AppInsightsKey)'
         }
         {
           name: 'ApplicationInsights:ConnectionString'
-          value: reference(appInsights.id, '2020-02-02').ConnectionString
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=AppInsightsConnString)'
         }
         {
           name: 'Storage:ConnectionString'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccount.id, '2021-08-01').keys[0].value}'
+          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=StorageConnString)'
         }
         {
           name: 'ApplicationInsights:LogLevel:Default'
@@ -183,6 +187,7 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
       netFrameworkVersion: 'v6.0'
       scmMinTlsVersion: '1.2'
       use32BitWorkerProcess: false
+      keyVaultReferenceIdentity: 'SystemAssigned'
     }
   }
 }
@@ -222,6 +227,81 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
     Application_Type: 'web'
     Request_Source: 'rest'
     WorkspaceResourceId: logAnalyticsWorkspace.id
+  }
+}
+
+resource keyVault 'Microsoft.KeyVault/vaults@2021-11-01-preview' = {
+  name: keyVaultName
+  location: location
+  properties: {
+    accessPolicies: [
+      {
+        objectId: app.identity.principalId
+        permissions: {
+          certificates: []
+          keys: []
+          secrets: [
+            'get'
+          ]
+        }
+        tenantId: tenantId
+      }
+    ]
+    enabledForDeployment: false
+    enabledForDiskEncryption: false
+    enabledForTemplateDeployment: false
+    enableSoftDelete: true
+    publicNetworkAccess: 'Enabled'
+    sku: {
+      family: 'A'
+      name: 'standard'
+    }
+    softDeleteRetentionInDays: 90
+    tenantId: tenantId
+  }
+}
+
+resource kvSecretAppInsightsConnString 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview' = {
+  name: 'AppInsightsConnString'
+  parent: keyVault
+  properties: {
+    attributes: {
+      enabled: true
+    }
+    value: '${reference(appInsights.id, '2020-02-02').ConnectionString}'
+  }
+}
+
+resource kvSecretAppInsightsKey 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview' = {
+  name: 'AppInsightsKey'
+  parent: keyVault
+  properties: {
+    attributes: {
+      enabled: true
+    }
+    value: '${reference(appInsights.id, '2020-02-02').InstrumentationKey}'
+  }
+}
+
+resource kvSecretClientSecret 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview' = {
+  name: 'ClientSecret'
+  parent: keyVault
+  properties: {
+    attributes: {
+      enabled: true
+    }
+    value: appClientSecret
+  }
+}
+
+resource kvSecretStorageConnString 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview' = {
+  name: 'StorageConnString'
+  parent: keyVault
+  properties: {
+    attributes: {
+      enabled: true
+    }
+    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${listKeys(storageAccount.id, '2021-08-01').keys[0].value}'
   }
 }
 
