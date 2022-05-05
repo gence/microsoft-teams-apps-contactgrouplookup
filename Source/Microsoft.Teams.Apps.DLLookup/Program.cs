@@ -17,12 +17,10 @@ IConfidentialClientApplication confidentialClientApp = ConfidentialClientApplica
     .WithClientSecret(builder.Configuration["AzureAd:ClientSecret"])
     .Build();
 
-builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<IConfidentialClientApplication>(confidentialClientApp);
 builder.Services.AddDLLookupAuthentication(builder.Configuration);
 builder.Services.AddSingleton<TokenAcquisitionHelper>();
-builder.Services.AddSession();
-builder.Services.AddMvc().AddSessionStateTempDataProvider();
+builder.Services.AddMvc();
 builder.Services.AddApplicationInsightsTelemetry(options: new ApplicationInsightsServiceOptions { ConnectionString = builder.Configuration["Storage:ConnectionString"] });
 
 builder.Services.Configure<StorageOptions>(options =>
@@ -48,8 +46,6 @@ builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-app.UseSession();
-
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
@@ -60,15 +56,10 @@ else
     app.UseHsts();
 }
 
-app.UseRouting();
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseStaticFiles();
-
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");
-});
 
 app.MapControllerRoute(
     name: "default",

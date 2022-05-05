@@ -78,11 +78,11 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             if (peoplePresenceDataList.Count > 0)
             {
                 var presenceBatches = peoplePresenceDataList.SplitList(BatchSplitCount);
-                GraphUtilityHelper graphClientBeta = new GraphUtilityHelper(accessToken);
+                GraphUtilityHelper graphClient = new GraphUtilityHelper(accessToken);
 
                 foreach (var presenceBatch in presenceBatches)
                 {
-                    peoplePresenceDataBatchResults.AddRange(await graphClientBeta.GetUserPresenceAsync(presenceBatch, this.logger));
+                    peoplePresenceDataBatchResults.AddRange(await graphClient.GetUserPresenceAsync(presenceBatch, this.logger));
                 }
             }
             else
