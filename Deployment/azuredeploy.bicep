@@ -150,10 +150,6 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
           value: '${cacheInterval}'
         }
         {
-          name: 'ApplicationInsights:InstrumentationKey'
-          value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=AppInsightsKey)'
-        }
-        {
           name: 'ApplicationInsights:ConnectionString'
           value: '@Microsoft.KeyVault(VaultName=${keyVaultName};SecretName=AppInsightsConnString)'
         }
@@ -269,17 +265,6 @@ resource kvSecretAppInsightsConnString 'Microsoft.KeyVault/vaults/secrets@2021-1
       enabled: true
     }
     value: '${reference(appInsights.id, '2020-02-02').ConnectionString}'
-  }
-}
-
-resource kvSecretAppInsightsKey 'Microsoft.KeyVault/vaults/secrets@2021-11-01-preview' = {
-  name: 'AppInsightsKey'
-  parent: keyVault
-  properties: {
-    attributes: {
-      enabled: true
-    }
-    value: '${reference(appInsights.id, '2020-02-02').InstrumentationKey}'
   }
 }
 

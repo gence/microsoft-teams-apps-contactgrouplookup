@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.6.1.6515",
-      "templateHash": "1400471290613423521"
+      "templateHash": "7110114430808654415"
     }
   },
   "parameters": {
@@ -205,10 +205,6 @@
               "value": "[format('{0}', parameters('cacheInterval'))]"
             },
             {
-              "name": "ApplicationInsights:InstrumentationKey",
-              "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=AppInsightsKey)', variables('keyVaultName'))]"
-            },
-            {
               "name": "ApplicationInsights:ConnectionString",
               "value": "[format('@Microsoft.KeyVault(VaultName={0};SecretName=AppInsightsConnString)', variables('keyVaultName'))]"
             },
@@ -341,21 +337,6 @@
           "enabled": true
         },
         "value": "[format('{0}', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').ConnectionString)]"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "apiVersion": "2021-11-01-preview",
-      "name": "[format('{0}/{1}', variables('keyVaultName'), 'AppInsightsKey')]",
-      "properties": {
-        "attributes": {
-          "enabled": true
-        },
-        "value": "[format('{0}', reference(resourceId('Microsoft.Insights/components', variables('appInsightsName')), '2020-02-02').InstrumentationKey)]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]",
