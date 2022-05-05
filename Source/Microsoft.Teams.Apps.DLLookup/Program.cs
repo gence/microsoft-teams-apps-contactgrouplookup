@@ -2,6 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.Identity.Client;
 using Microsoft.Teams.Apps.DLLookup.Authentication;
 using Microsoft.Teams.Apps.DLLookup.Helpers;
@@ -22,11 +23,11 @@ builder.Services.AddDLLookupAuthentication(builder.Configuration);
 builder.Services.AddSingleton<TokenAcquisitionHelper>();
 builder.Services.AddSession();
 builder.Services.AddMvc().AddSessionStateTempDataProvider();
-builder.Services.AddApplicationInsightsTelemetry(builder.Configuration["ApplicationInsights:InstrumentationKey"]);
+builder.Services.AddApplicationInsightsTelemetry(options: new ApplicationInsightsServiceOptions { ConnectionString = builder.Configuration["Storage:ConnectionString"] });
 
 builder.Services.Configure<StorageOptions>(options =>
 {
-    options.ConnectionString = builder.Configuration.GetValue<string>("Storage:ConnectionString");
+    options.ConnectionString = builder.Configuration["Storage:ConnectionString"];
 });
 
 builder.Services.Configure<Microsoft.Teams.Apps.DLLookup.Models.CacheOptions>(options =>
@@ -36,10 +37,10 @@ builder.Services.Configure<Microsoft.Teams.Apps.DLLookup.Models.CacheOptions>(op
 
 builder.Services.Configure<AzureAdOptions>(options =>
 {
-    options.ClientId = builder.Configuration.GetValue<string>("AzureAd:ClientId");
-    options.ClientSecret = builder.Configuration.GetValue<string>("AzureAd:ClientSecret");
-    options.GraphScope = builder.Configuration.GetValue<string>("AzureAd:GraphScope");
-    options.TenantId = builder.Configuration.GetValue<string>("AzureAd:TenantId");
+    options.ClientId = builder.Configuration["AzureAd:ClientId"];
+    options.ClientSecret = builder.Configuration["AzureAd:ClientSecret"];
+    options.GraphScope = builder.Configuration["AzureAd:GraphScope"];
+    options.TenantId = builder.Configuration["AzureAd:TenantId"];
 });
 
 builder.Services.AddRepositories();
