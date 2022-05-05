@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.6.1.6515",
-      "templateHash": "7110114430808654415"
+      "templateHash": "5124269321104580229"
     }
   },
   "parameters": {
@@ -219,6 +219,10 @@
             {
               "name": "WEBSITE_NODE_DEFAULT_VERSION",
               "value": "~16"
+            },
+            {
+              "name": "SCM_COMMAND_IDLE_TIMEOUT",
+              "value": "600"
             }
           ],
           "cors": {
