@@ -6,11 +6,10 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
     using System;
     using System.Threading.Tasks;
+    using Azure.Data.Tables;
+    using Azure.Data.Tables.Models;
     using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.DLLookup.Models;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.RetryPolicies;
-    using Microsoft.WindowsAzure.Storage.Table;
 
     /// <summary>
     /// Implements storage provider which initializes table if not exists and provide table client instance.
@@ -48,7 +47,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// <summary>
         /// Gets or sets a table in the Microsoft Azure Table storage.
         /// </summary>
-        protected CloudTable DlLookupCloudTable { get; set; }
+        protected TableItem DlLookupTableItem { get; set; }
+
+        /// <summary>
+        /// Gets or sets Microsoft Azure Table service client.
+        /// </summary>
+        protected TableClient DLTableClient { get; set; }
 
         /// <summary>
         /// Ensures Microsoft Azure Table Storage should be created before working on table.
@@ -63,21 +67,18 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Create storage table if it does not exist.
         /// </summary>
         /// <returns><see cref="Task"/> representing the asynchronous operation task which represents table is created if it does not exists.</returns>
-        private async Task<CloudTable> InitializeAsync()
+        private async Task<TableItem> InitializeAsync()
         {
-            // Exponential retry policy with back off of 1 seconds and 3 retries.
-            var exponentialRetryPolicy = new TableRequestOptions()
-            {
-                RetryPolicy = new ExponentialRetry(TimeSpan.FromSeconds(1), 3),
-            };
+            var options = new TableClientOptions();
+            options.Retry.Delay = TimeSpan.FromSeconds(1);
+            options.Retry.Mode = Azure.Core.RetryMode.Exponential;
+            options.Retry.MaxRetries = 3;
 
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(this.connectionString);
-            CloudTableClient cloudTableClient = storageAccount.CreateCloudTableClient();
-            cloudTableClient.DefaultRequestOptions = exponentialRetryPolicy;
-            this.DlLookupCloudTable = cloudTableClient.GetTableReference(this.TableName);
-            await this.DlLookupCloudTable.CreateIfNotExistsAsync();
+            var serviceClient = new TableServiceClient(this.connectionString, options);
+            this.DlLookupTableItem = await serviceClient.CreateTableIfNotExistsAsync(this.TableName);
+            this.DLTableClient = serviceClient.GetTableClient(this.TableName);
 
-            return this.DlLookupCloudTable;
+            return this.DlLookupTableItem;
         }
     }
 }

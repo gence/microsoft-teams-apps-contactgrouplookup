@@ -9,7 +9,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.DLLookup.Models;
-    using Microsoft.WindowsAzure.Storage.Table;
 
     /// <summary>
     ///  This class helps to get, create and update page size for currently logged in user from storage.
@@ -46,9 +45,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<UserPageSizeChoiceTableEntity>("default", userObjectId);
-                TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
-                return result.Result as UserPageSizeChoiceTableEntity;
+                UserPageSizeChoiceTableEntity queryResult = await this.DLTableClient.GetEntityAsync<UserPageSizeChoiceTableEntity>("default", userObjectId);
+                return queryResult;
             }
             catch (Exception ex)
             {
@@ -68,9 +66,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<UserPageSizeChoiceTableEntity>(partitionKey.ToLowerInvariant(), userObjectId.ToLowerInvariant());
-                TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
-                return result.Result as UserPageSizeChoiceTableEntity;
+                UserPageSizeChoiceTableEntity queryResult = await this.DLTableClient.GetEntityAsync<UserPageSizeChoiceTableEntity>(partitionKey.ToLowerInvariant(), userObjectId.ToLowerInvariant());
+                return queryResult;
             }
             catch (Exception ex)
             {
@@ -89,8 +86,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.InsertOrReplace(userPageSizeChoiceTableEntity);
-                await this.DlLookupCloudTable.ExecuteAsync(operation);
+                await this.DLTableClient.UpsertEntityAsync<UserPageSizeChoiceTableEntity>(userPageSizeChoiceTableEntity);
+                return;
             }
             catch (Exception ex)
             {

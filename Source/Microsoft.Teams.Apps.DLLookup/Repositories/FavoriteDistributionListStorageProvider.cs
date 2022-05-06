@@ -7,10 +7,11 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
+    using Azure;
+    using Azure.Data.Tables;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.DLLookup.Models;
-    using Microsoft.WindowsAzure.Storage.Table;
 
     /// <summary>
     /// The class contains read, create and delete operations for distribution list on table storage.
@@ -47,9 +48,14 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                string filter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, userObjectId);
-                var query = new TableQuery<FavoriteDistributionListTableEntity>().Where(filter);
-                var result = await this.DlLookupCloudTable.ExecuteQuerySegmentedAsync(query, null);
+                AsyncPageable<FavoriteDistributionListTableEntity> queryResults = this.DLTableClient.QueryAsync<FavoriteDistributionListTableEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {userObjectId}"));
+                List<FavoriteDistributionListTableEntity> result = new List<FavoriteDistributionListTableEntity>();
+
+                await foreach (var p in queryResults.AsPages())
+                {
+                    result.AddRange(p.Values);
+                }
+
                 return result;
             }
             catch (Exception ex)
@@ -69,8 +75,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.InsertOrReplace(favoriteDistributionListDataEntity);
-                await this.DlLookupCloudTable.ExecuteAsync(operation);
+                await this.DLTableClient.UpsertEntityAsync<FavoriteDistributionListTableEntity>(favoriteDistributionListDataEntity);
+                return;
             }
             catch (Exception ex)
             {
@@ -89,8 +95,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Delete(favoriteDistributionListEntity);
-                await this.DlLookupCloudTable.ExecuteAsync(operation);
+                await this.DLTableClient.DeleteEntityAsync(favoriteDistributionListEntity.PartitionKey, favoriteDistributionListEntity.RowKey);
+                return;
             }
             catch (Exception ex)
             {
@@ -110,9 +116,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<FavoriteDistributionListTableEntity>(userObjectId, favoriteDistributionListDataId.ToLowerInvariant());
-                TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
-                return result.Result as FavoriteDistributionListTableEntity;
+                FavoriteDistributionListTableEntity queryResult = await this.DLTableClient.GetEntityAsync<FavoriteDistributionListTableEntity>(userObjectId, favoriteDistributionListDataId);
+                return queryResult;
             }
             catch (Exception ex)
             {

@@ -4,13 +4,26 @@
 
 namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
-    using Microsoft.WindowsAzure.Storage.Table;
+    using Azure;
+    using Azure.Data.Tables;
 
     /// <summary>
     /// Favorite Distribution List Member Data table entity class represents pinned member records.
     /// </summary>
-    public class FavoriteDistributionListMemberTableEntity : TableEntity
+    public class FavoriteDistributionListMemberTableEntity : ITableEntity
     {
+        /// <inheritdoc/>
+        public string PartitionKey { get; set; }
+
+        /// <inheritdoc/>
+        public string RowKey { get; set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset? Timestamp { get; set; }
+
+        /// <inheritdoc/>
+        public ETag ETag { get; set; }
+
         /// <summary>
         /// Gets or sets pinned record's distribution list GUID.
         /// </summary>
@@ -19,7 +32,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// <summary>
         /// Gets or sets Partition key with users's object id.
         /// </summary>
-        [IgnoreProperty]
         public string UserObjectId
         {
             get { return this.PartitionKey; }
@@ -29,7 +41,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// <summary>
         /// Gets or sets row key with pinned record id + Distribution list id.
         /// </summary>
-        [IgnoreProperty]
         public string DistributionListMemberId
         {
             get { return this.RowKey; }

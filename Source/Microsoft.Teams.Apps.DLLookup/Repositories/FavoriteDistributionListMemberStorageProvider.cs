@@ -5,13 +5,12 @@
 namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
     using System;
-    using System.Collections.Generic;
-    using System.Threading;
+
     using System.Threading.Tasks;
+    using Azure.Data.Tables;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.DLLookup.Models;
-    using Microsoft.WindowsAzure.Storage.Table;
 
     /// <summary>
     /// The class contains read, write and delete operations for distribution list member on table storage.
@@ -48,8 +47,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.InsertOrReplace(favoriteDistributionListMemberDataEntity);
-                await this.DlLookupCloudTable.ExecuteAsync(operation);
+                await this.DLTableClient.UpsertEntityAsync<FavoriteDistributionListMemberTableEntity>(favoriteDistributionListMemberDataEntity);
+                return;
             }
             catch (Exception ex)
             {
@@ -68,10 +67,15 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                string partitionKeyFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, userObjectId);
-                TableQuery<FavoriteDistributionListMemberTableEntity> query = new TableQuery<FavoriteDistributionListMemberTableEntity>().Where(partitionKeyFilter);
-                IList<FavoriteDistributionListMemberTableEntity> entities = await this.ExecuteQueryAsync(query);
-                return entities;
+                var queryResults = this.DLTableClient.QueryAsync<FavoriteDistributionListMemberTableEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {userObjectId}"));
+                List<FavoriteDistributionListMemberTableEntity> result = new List<FavoriteDistributionListMemberTableEntity>();
+
+                await foreach (var p in queryResults.AsPages())
+                {
+                    result.AddRange(p.Values);
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -90,8 +94,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Delete(favoriteDistributionListMemberTableEntity);
-                await this.DlLookupCloudTable.ExecuteAsync(operation);
+                await this.DLTableClient.DeleteEntityAsync(favoriteDistributionListMemberTableEntity.PartitionKey, favoriteDistributionListMemberTableEntity.RowKey);
+                return;
             }
             catch (Exception ex)
             {
@@ -111,51 +115,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             try
             {
                 await this.EnsureInitializedAsync();
-                TableOperation operation = TableOperation.Retrieve<FavoriteDistributionListMemberTableEntity>(userObjectId, pinnedDistributionListId.ToLowerInvariant());
-                TableResult result = await this.DlLookupCloudTable.ExecuteAsync(operation);
-                return result.Result as FavoriteDistributionListMemberTableEntity;
+                FavoriteDistributionListMemberTableEntity queryResult = await this.DLTableClient.GetEntityAsync<FavoriteDistributionListMemberTableEntity>(userObjectId, pinnedDistributionListId);
+                return queryResult;
             }
             catch (Exception ex)
             {
                 this.logger.LogError(ex, $"An error occurred in GetFavoriteDistributionListFromStorageAsync: userObjectId: {userObjectId}.");
-                throw;
-            }
-        }
-
-        /// <summary>
-        /// Execute Table query operation.
-        /// </summary>
-        /// <param name="query">Search query used to filter distribution list.</param>
-        /// <param name="count">Optional parameter. Maximum number of desired entities.</param>
-        /// <param name="cancellationToken">Cancellation token details.</param>
-        /// <returns>Result of the asynchronous operation.</returns>
-        private async Task<IList<FavoriteDistributionListMemberTableEntity>> ExecuteQueryAsync(
-            TableQuery<FavoriteDistributionListMemberTableEntity> query,
-            int? count = null,
-            CancellationToken cancellationToken = default)
-        {
-            query.TakeCount = count;
-
-            try
-            {
-                List<FavoriteDistributionListMemberTableEntity> result = new List<FavoriteDistributionListMemberTableEntity>();
-                TableContinuationToken token = null;
-
-                do
-                {
-                    TableQuerySegment<FavoriteDistributionListMemberTableEntity> segment = await this.DlLookupCloudTable.ExecuteQuerySegmentedAsync<FavoriteDistributionListMemberTableEntity>(query, token);
-                    token = segment.ContinuationToken;
-                    result.AddRange(segment);
-                }
-                while (token != null
-                    && !cancellationToken.IsCancellationRequested
-                    && (count == null || result.Count < count.Value));
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                this.logger.LogError(ex, "Error occurred while executing the table query.");
                 throw;
             }
         }

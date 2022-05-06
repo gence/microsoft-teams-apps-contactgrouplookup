@@ -2,15 +2,28 @@
 // Copyright (c) Microsoft. All rights reserved.
 // </copyright>
 
+using Azure;
+using Azure.Data.Tables;
+
 namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
-    using Microsoft.WindowsAzure.Storage.Table;
-
     /// <summary>
     /// User page size choice table entity class used to represent user's page size choices.
     /// </summary>
-    public class UserPageSizeChoiceTableEntity : TableEntity
+    public class UserPageSizeChoiceTableEntity : ITableEntity
     {
+        /// <inheritdoc/>
+        public string PartitionKey { get; set; }
+
+        /// <inheritdoc/>
+        public string RowKey { get; set; }
+
+        /// <inheritdoc/>
+        public DateTimeOffset? Timestamp { get; set; }
+
+        /// <inheritdoc/>
+        public ETag ETag { get; set; }
+
         /// <summary>
         /// Gets or sets distribution list page size.
         /// </summary>
@@ -24,7 +37,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// <summary>
         /// Gets or sets Partition key with "default" value.
         /// </summary>
-        [IgnoreProperty]
         public string DefaultValue
         {
             get { return this.PartitionKey; }
@@ -34,7 +46,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// <summary>
         /// Gets or sets Row key with user's AAD object Id.
         /// </summary>
-        [IgnoreProperty]
         public string UserObjectId
         {
             get { return this.RowKey; }

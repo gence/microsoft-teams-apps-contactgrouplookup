@@ -21,6 +21,7 @@ builder.Services.AddSingleton<IConfidentialClientApplication>(confidentialClient
 builder.Services.AddDLLookupAuthentication(builder.Configuration);
 builder.Services.AddSingleton<TokenAcquisitionHelper>();
 builder.Services.AddMvc();
+builder.Services.AddSession();
 builder.Services.AddApplicationInsightsTelemetry(options: new ApplicationInsightsServiceOptions { ConnectionString = builder.Configuration["Storage:ConnectionString"] });
 
 builder.Services.Configure<StorageOptions>(options =>
