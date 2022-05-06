@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.6.1.6515",
-      "templateHash": "5124269321104580229"
+      "templateHash": "2677358878251151416"
     }
   },
   "parameters": {
@@ -378,95 +378,91 @@
     },
     {
       "condition": "[variables('useFrontDoor')]",
-      "type": "Microsoft.Network/frontDoors",
-      "apiVersion": "2020-05-01",
-      "name": "[variables('frontDoorName')]",
-      "location": "Global",
-      "properties": {
-        "backendPools": [
-          {
-            "name": "backendPool1",
-            "properties": {
-              "backends": [
-                {
-                  "address": "[variables('appDomain')]",
-                  "backendHostHeader": "[variables('appDomain')]",
-                  "httpPort": 80,
-                  "httpsPort": 443,
-                  "priority": 1,
-                  "weight": 50,
-                  "enabledState": "Enabled"
-                }
-              ],
-              "healthProbeSettings": {
-                "id": "[resourceId('Microsoft.Network/frontDoors/healthProbeSettings', variables('frontDoorName'), 'healthProbeSettings1')]"
-              },
-              "loadBalancingSettings": {
-                "id": "[resourceId('Microsoft.Network/frontDoors/loadBalancingSettings', variables('frontDoorName'), 'loadBalancingSettings1')]"
-              }
-            }
-          }
-        ],
-        "healthProbeSettings": [
-          {
-            "name": "healthProbeSettings1",
-            "properties": {
-              "intervalInSeconds": 255,
-              "path": "/health",
-              "protocol": "Https"
-            }
-          }
-        ],
-        "frontendEndpoints": [
-          {
-            "name": "frontendEndpoint1",
-            "properties": {
-              "hostName": "[variables('frontDoorDomain')]",
-              "sessionAffinityEnabledState": "Disabled"
-            }
-          }
-        ],
-        "loadBalancingSettings": [
-          {
-            "name": "loadBalancingSettings1",
-            "properties": {
-              "additionalLatencyMilliseconds": 0,
-              "sampleSize": 4,
-              "successfulSamplesRequired": 2
-            }
-          }
-        ],
-        "routingRules": [
-          {
-            "name": "routingRule1",
-            "properties": {
-              "frontendEndpoints": [
-                {
-                  "id": "[resourceId('Microsoft.Network/frontDoors/frontendEndpoints', variables('frontDoorName'), 'frontendEndpoint1')]"
-                }
-              ],
-              "acceptedProtocols": [
-                "Https"
-              ],
-              "patternsToMatch": [
-                "/*"
-              ],
-              "routeConfiguration": {
-                "@odata.type": "#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration",
-                "forwardingProtocol": "HttpsOnly",
-                "backendPool": {
-                  "id": "[resourceId('Microsoft.Network/frontDoors/backendPools', variables('frontDoorName'), 'backendPool1')]"
-                }
-              },
-              "enabledState": "Enabled"
-            }
-          }
-        ],
-        "enabledState": "Enabled",
-        "friendlyName": "[variables('frontDoorName')]"
+      "type": "Microsoft.Cdn/profiles",
+      "apiVersion": "2021-06-01",
+      "name": "[format('{0}Profile', variables('frontDoorName'))]",
+      "location": "global",
+      "sku": {
+        "name": "Standard_AzureFrontDoor"
       },
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('appName'))]"
+      ]
+    },
+    {
+      "condition": "[variables('useFrontDoor')]",
+      "type": "Microsoft.Cdn/profiles/afdEndpoints",
+      "apiVersion": "2021-06-01",
+      "name": "[format('{0}/{1}', format('{0}Profile', variables('frontDoorName')), variables('frontDoorName'))]",
+      "location": "global",
+      "properties": {
+        "enabledState": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', format('{0}Profile', variables('frontDoorName')))]"
+      ]
+    },
+    {
+      "condition": "[variables('useFrontDoor')]",
+      "type": "Microsoft.Cdn/profiles/originGroups",
+      "apiVersion": "2021-06-01",
+      "name": "[format('{0}/{1}', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]",
+      "properties": {
+        "loadBalancingSettings": {
+          "sampleSize": 4,
+          "successfulSamplesRequired": 3
+        },
+        "healthProbeSettings": {
+          "probePath": "/",
+          "probeRequestType": "HEAD",
+          "probeProtocol": "Https",
+          "probeIntervalInSeconds": 100
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles', format('{0}Profile', variables('frontDoorName')))]"
+      ]
+    },
+    {
+      "condition": "[variables('useFrontDoor')]",
+      "type": "Microsoft.Cdn/profiles/originGroups/origins",
+      "apiVersion": "2021-06-01",
+      "name": "[format('{0}/{1}/{2}', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')), format('{0}Origin', variables('frontDoorName')))]",
+      "properties": {
+        "hostName": "[variables('appDomain')]",
+        "httpPort": 80,
+        "httpsPort": 443,
+        "originHostHeader": "[variables('appDomain')]",
+        "priority": 1,
+        "weight": 50
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]"
+      ]
+    },
+    {
+      "condition": "[variables('useFrontDoor')]",
+      "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
+      "apiVersion": "2021-06-01",
+      "name": "[format('{0}/{1}/{2}', format('{0}Profile', variables('frontDoorName')), variables('frontDoorName'), format('{0}Route', variables('frontDoorName')))]",
+      "properties": {
+        "originGroup": {
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]"
+        },
+        "supportedProtocols": [
+          "Https"
+        ],
+        "patternsToMatch": [
+          "/*"
+        ],
+        "forwardingProtocol": "HttpsOnly",
+        "linkToDefaultDomain": "Enabled",
+        "httpsRedirect": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', format('{0}Profile', variables('frontDoorName')), variables('frontDoorName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')), format('{0}Origin', variables('frontDoorName')))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]"
       ]
     }
   ],

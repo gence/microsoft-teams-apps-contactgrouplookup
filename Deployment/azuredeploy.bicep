@@ -294,95 +294,76 @@ resource kvSecretStorageConnString 'Microsoft.KeyVault/vaults/secrets@2021-11-01
   }
 }
 
-resource frontDoor 'Microsoft.Network/frontDoors@2020-05-01' = if (useFrontDoor) {
-  name: frontDoorName
-  location: 'Global'
-  properties: {
-    backendPools: [
-      {
-        name: 'backendPool1'
-        properties: {
-          backends: [
-            {
-              address: appDomain
-              backendHostHeader: appDomain
-              httpPort: 80
-              httpsPort: 443
-              priority: 1
-              weight: 50
-              enabledState: 'Enabled'
-            }
-          ]
-          healthProbeSettings: {
-            id: resourceId('Microsoft.Network/frontDoors/healthProbeSettings', frontDoorName, 'healthProbeSettings1')
-          }
-          loadBalancingSettings: {
-            id: resourceId('Microsoft.Network/frontDoors/loadBalancingSettings', frontDoorName, 'loadBalancingSettings1')
-          }
-        }
-      }
-    ]
-    healthProbeSettings: [
-      {
-        name: 'healthProbeSettings1'
-        properties: {
-          intervalInSeconds: 255
-          path: '/health'
-          protocol: 'Https'
-        }
-      }
-    ]
-    frontendEndpoints: [
-      {
-        name: 'frontendEndpoint1'
-        properties: {
-          hostName: frontDoorDomain
-          sessionAffinityEnabledState: 'Disabled'
-        }
-      }
-    ]
-    loadBalancingSettings: [
-      {
-        name: 'loadBalancingSettings1'
-        properties: {
-          additionalLatencyMilliseconds: 0
-          sampleSize: 4
-          successfulSamplesRequired: 2
-        }
-      }
-    ]
-    routingRules: [
-      {
-        name: 'routingRule1'
-        properties: {
-          frontendEndpoints: [
-            {
-              id: resourceId('Microsoft.Network/frontDoors/frontendEndpoints', frontDoorName, 'frontendEndpoint1')
-            }
-          ]
-          acceptedProtocols: [
-            'Https'
-          ]
-          patternsToMatch: [
-            '/*'
-          ]
-          routeConfiguration: {
-            '@odata.type': '#Microsoft.Azure.FrontDoor.Models.FrontdoorForwardingConfiguration'
-            forwardingProtocol: 'HttpsOnly'
-            backendPool: {
-              id: resourceId('Microsoft.Network/frontDoors/backendPools', frontDoorName, 'backendPool1')
-            }
-          }
-          enabledState: 'Enabled'
-        }
-      }
-    ]
-    enabledState: 'Enabled'
-    friendlyName: frontDoorName
+resource frontDoorProfile 'Microsoft.Cdn/profiles@2021-06-01' = if (useFrontDoor) {
+  name: '${frontDoorName}Profile'
+  location: 'global'
+  sku: {
+    name: 'Standard_AzureFrontDoor'
   }
   dependsOn: [
     app
   ]
+}
+
+resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2021-06-01' = if (useFrontDoor) {
+  name: frontDoorName
+  parent: frontDoorProfile
+  location: 'global'
+  properties: {
+    enabledState: 'Enabled'
+  }
+}
+
+resource frontDoorOriginGroup 'Microsoft.Cdn/profiles/originGroups@2021-06-01' = if (useFrontDoor) {
+  name: '${frontDoorName}OriginGroup'
+  parent: frontDoorProfile
+  properties: {
+    loadBalancingSettings: {
+      sampleSize: 4
+      successfulSamplesRequired: 3
+    }
+    healthProbeSettings: {
+      probePath: '/'
+      probeRequestType: 'HEAD'
+      probeProtocol: 'Https'
+      probeIntervalInSeconds: 100
+    }
+  }
+}
+
+resource frontDoorOrigin 'Microsoft.Cdn/profiles/originGroups/origins@2021-06-01' = if (useFrontDoor) {
+  name: '${frontDoorName}Origin'
+  parent: frontDoorOriginGroup
+  properties: {
+    hostName: appDomain
+    httpPort: 80
+    httpsPort: 443
+    originHostHeader: appDomain
+    priority: 1
+    weight: 50
+  }
+}
+
+resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2021-06-01' = if (useFrontDoor) {
+  name: '${frontDoorName}Route'
+  parent: frontDoorEndpoint
+  dependsOn:[
+    frontDoorOrigin // This explicit dependency is required to ensure that the origin group is not empty when the route is created.
+  ]
+  properties: {
+    originGroup: {
+      id: frontDoorOriginGroup.id
+    }
+    supportedProtocols: [
+      'Https'
+    ]
+    patternsToMatch: [
+      '/*'
+    ]
+    forwardingProtocol: 'HttpsOnly'
+    linkToDefaultDomain: 'Enabled'
+    httpsRedirect: 'Enabled'
+  }
 }
 
 output appClientId string = appClientId
