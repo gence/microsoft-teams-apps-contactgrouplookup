@@ -5,9 +5,7 @@
 namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
     using System;
-    using System.Threading.Tasks;
     using Azure.Data.Tables;
-    using Azure.Data.Tables.Models;
     using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.DLLookup.Models;
 
@@ -31,13 +29,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             storageOptions = storageOptions ?? throw new ArgumentNullException(nameof(storageOptions));
             this.connectionString = storageOptions.CurrentValue.ConnectionString ?? throw new ArgumentNullException(nameof(storageOptions));
             this.TableName = tableName;
-            this.InitializeTask = new Lazy<Task>(() => this.InitializeAsync());
+            this.InitializeTableClient();
         }
-
-        /// <summary>
-        /// Gets or sets task for initialization.
-        /// </summary>
-        protected Lazy<Task> InitializeTask { get; set; }
 
         /// <summary>
         /// Gets or sets Microsoft Azure Table storage table name.
@@ -45,29 +38,14 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         protected string TableName { get; set; }
 
         /// <summary>
-        /// Gets or sets a table in the Microsoft Azure Table storage.
-        /// </summary>
-        protected TableItem DlLookupTableItem { get; set; }
-
-        /// <summary>
         /// Gets or sets Microsoft Azure Table service client.
         /// </summary>
         protected TableClient DLTableClient { get; set; }
 
         /// <summary>
-        /// Ensures Microsoft Azure Table Storage should be created before working on table.
-        /// </summary>
-        /// <returns>Represents an asynchronous operation.</returns>
-        protected async Task EnsureInitializedAsync()
-        {
-            await this.InitializeTask.Value;
-        }
-
-        /// <summary>
         /// Create storage table if it does not exist.
         /// </summary>
-        /// <returns><see cref="Task"/> representing the asynchronous operation task which represents table is created if it does not exists.</returns>
-        private async Task<TableItem> InitializeAsync()
+        private void InitializeTableClient()
         {
             var options = new TableClientOptions();
             options.Retry.Delay = TimeSpan.FromSeconds(1);
@@ -75,10 +53,9 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             options.Retry.MaxRetries = 3;
 
             var serviceClient = new TableServiceClient(this.connectionString, options);
-            this.DlLookupTableItem = await serviceClient.CreateTableIfNotExistsAsync(this.TableName);
             this.DLTableClient = serviceClient.GetTableClient(this.TableName);
 
-            return this.DlLookupTableItem;
+            return;
         }
     }
 }

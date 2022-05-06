@@ -47,7 +47,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 AsyncPageable<FavoriteDistributionListTableEntity> queryResults = this.DLTableClient.QueryAsync<FavoriteDistributionListTableEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {userObjectId}"));
                 List<FavoriteDistributionListTableEntity> result = new List<FavoriteDistributionListTableEntity>();
 
@@ -74,7 +73,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 await this.DLTableClient.UpsertEntityAsync<FavoriteDistributionListTableEntity>(favoriteDistributionListDataEntity);
                 return;
             }
@@ -94,7 +92,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 await this.DLTableClient.DeleteEntityAsync(favoriteDistributionListEntity.PartitionKey, favoriteDistributionListEntity.RowKey);
                 return;
             }
@@ -115,9 +112,20 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 FavoriteDistributionListTableEntity queryResult = await this.DLTableClient.GetEntityAsync<FavoriteDistributionListTableEntity>(userObjectId, favoriteDistributionListDataId);
                 return queryResult;
+            }
+            catch (RequestFailedException ex)
+            {
+                if (ex.Status == StatusCodes.Status404NotFound)
+                {
+                    return null;
+                }
+                else
+                {
+                    this.logger.LogError(ex, $"An error occurred in GetFavoriteDistributionListFromStorageAsync: userObjectId: {userObjectId}.");
+                    throw;
+                }
             }
             catch (Exception ex)
             {

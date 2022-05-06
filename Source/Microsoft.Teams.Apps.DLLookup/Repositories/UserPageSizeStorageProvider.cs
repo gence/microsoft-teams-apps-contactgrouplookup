@@ -6,6 +6,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
 {
     using System;
     using System.Threading.Tasks;
+    using Azure;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
     using Microsoft.Teams.Apps.DLLookup.Models;
@@ -44,9 +45,20 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 UserPageSizeChoiceTableEntity queryResult = await this.DLTableClient.GetEntityAsync<UserPageSizeChoiceTableEntity>("default", userObjectId);
                 return queryResult;
+            }
+            catch (RequestFailedException ex)
+            {
+                if (ex.Status == StatusCodes.Status404NotFound)
+                {
+                    return null;
+                }
+                else
+                {
+                    this.logger.LogError(ex, $"An error occurred in GetUserPageSizeChoice: userObjectId: {userObjectId}.");
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -65,9 +77,20 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 UserPageSizeChoiceTableEntity queryResult = await this.DLTableClient.GetEntityAsync<UserPageSizeChoiceTableEntity>(partitionKey.ToLowerInvariant(), userObjectId.ToLowerInvariant());
                 return queryResult;
+            }
+            catch (RequestFailedException ex)
+            {
+                if (ex.Status == StatusCodes.Status404NotFound)
+                {
+                    return null;
+                }
+                else
+                {
+                    this.logger.LogError(ex, $"An error occurred in GetUserPageSizeAsync: userObjectId: {userObjectId}.");
+                    throw;
+                }
             }
             catch (Exception ex)
             {
@@ -85,7 +108,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 await this.DLTableClient.UpsertEntityAsync<UserPageSizeChoiceTableEntity>(userPageSizeChoiceTableEntity);
                 return;
             }

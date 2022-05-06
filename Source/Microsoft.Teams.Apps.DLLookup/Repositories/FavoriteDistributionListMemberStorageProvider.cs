@@ -7,6 +7,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     using System;
 
     using System.Threading.Tasks;
+    using Azure;
     using Azure.Data.Tables;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -46,7 +47,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 await this.DLTableClient.UpsertEntityAsync<FavoriteDistributionListMemberTableEntity>(favoriteDistributionListMemberDataEntity);
                 return;
             }
@@ -66,7 +66,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 var queryResults = this.DLTableClient.QueryAsync<FavoriteDistributionListMemberTableEntity>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {userObjectId}"));
                 List<FavoriteDistributionListMemberTableEntity> result = new List<FavoriteDistributionListMemberTableEntity>();
 
@@ -93,7 +92,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 await this.DLTableClient.DeleteEntityAsync(favoriteDistributionListMemberTableEntity.PartitionKey, favoriteDistributionListMemberTableEntity.RowKey);
                 return;
             }
@@ -114,9 +112,20 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         {
             try
             {
-                await this.EnsureInitializedAsync();
                 FavoriteDistributionListMemberTableEntity queryResult = await this.DLTableClient.GetEntityAsync<FavoriteDistributionListMemberTableEntity>(userObjectId, pinnedDistributionListId);
                 return queryResult;
+            }
+            catch (RequestFailedException ex)
+            {
+                if (ex.Status == StatusCodes.Status404NotFound)
+                {
+                    return null;
+                }
+                else
+                {
+                    this.logger.LogError(ex, $"An error occurred in GetFavoriteDistributionListFromStorageAsync: userObjectId: {userObjectId}.");
+                    throw;
+                }
             }
             catch (Exception ex)
             {

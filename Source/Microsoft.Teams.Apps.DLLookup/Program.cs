@@ -3,6 +3,7 @@
 // </copyright>
 
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
+using Microsoft.ApplicationInsights.SnapshotCollector;
 using Microsoft.Identity.Client;
 using Microsoft.Teams.Apps.DLLookup.Authentication;
 using Microsoft.Teams.Apps.DLLookup.Helpers;
@@ -22,7 +23,8 @@ builder.Services.AddDLLookupAuthentication(builder.Configuration);
 builder.Services.AddSingleton<TokenAcquisitionHelper>();
 builder.Services.AddMvc();
 builder.Services.AddSession();
-builder.Services.AddApplicationInsightsTelemetry(options: new ApplicationInsightsServiceOptions { ConnectionString = builder.Configuration["Storage:ConnectionString"] });
+builder.Services.AddApplicationInsightsTelemetry(options: new ApplicationInsightsServiceOptions { ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"] });
+builder.Services.AddSnapshotCollector((configuration) => builder.Configuration.Bind(nameof(SnapshotCollectorConfiguration), configuration));
 
 builder.Services.Configure<StorageOptions>(options =>
 {

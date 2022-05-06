@@ -17,6 +17,7 @@
 		<PackageReference Include="Azure.Data.Tables" Version="12.5.0" />
 		<PackageReference Include="Azure.Identity" Version="1.6.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.20.0" />
+		<PackageReference Include="Microsoft.ApplicationInsights.SnapshotCollector" Version="1.4.3" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.AzureAD.UI" Version="6.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.SpaProxy" Version="6.0.4" />
 		<PackageReference Include="Microsoft.Graph" Version="4.27.0" />

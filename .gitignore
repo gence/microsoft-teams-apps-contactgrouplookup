@@ -360,3 +360,4 @@ MigrationBackup/
 /Source/.vs/Microsoft.Teams.Apps.DLLookup
 /Source/Microsoft.Teams.Apps.DLLookup/bin/Debug
 /Source/Microsoft.Teams.Apps.DLLookup/ClientApp/build
+/Source/Microsoft.Teams.Apps.DLLookup/.config/dotnet-tools.json
