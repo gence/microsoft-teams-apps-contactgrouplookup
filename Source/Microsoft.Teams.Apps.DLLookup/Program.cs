@@ -15,7 +15,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 var scopes = builder.Configuration["AzureAd:GraphScope"].Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
 IConfidentialClientApplication confidentialClientApp = ConfidentialClientApplicationBuilder.Create(builder.Configuration["AzureAd:ClientId"])
-    .WithClientSecret(builder.Configuration["AzureAd:ClientSecret"])
+    .WithClientSecret(builder.Configuration["AzureAd:ClientSecret"]).WithTenantId(builder.Configuration["AzureAd:TenantId"])
     .Build();
 
 builder.Services.AddSingleton<IConfidentialClientApplication>(confidentialClientApp);

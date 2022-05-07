@@ -53,6 +53,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             options.Retry.MaxRetries = 3;
 
             var serviceClient = new TableServiceClient(this.connectionString, options);
+            serviceClient.CreateTableIfNotExists(this.TableName);
             this.DLTableClient = serviceClient.GetTableClient(this.TableName);
 
             return;
