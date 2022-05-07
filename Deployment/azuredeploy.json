@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.6.1.6515",
-      "templateHash": "2677358878251151416"
+      "templateHash": "13141376652278970797"
     }
   },
   "parameters": {
@@ -39,7 +39,13 @@
         "Azure Front Door"
       ],
       "metadata": {
-        "description": "How the app will be hosted on a domain that is not *.azurewebsites.net. Azure Front Door is an easy option that the template can set up automatically, but it comes with ongoing monthly costs. "
+        "description": "How the app will be hosted on a domain that is not *.azurewebsites.net. Azure Front Door is an easy option that the template can set up automatically, but it comes with ongoing monthly costs."
+      }
+    },
+    "customDomainName": {
+      "type": "string",
+      "metadata": {
+        "description": "Custom domain name (if chosen)."
       }
     },
     "tenantId": {
@@ -108,13 +114,11 @@
     "uniqueHash": "[uniqueString(subscription().subscriptionId, resourceGroup().id, parameters('baseResourceName'))]",
     "appName": "[parameters('baseResourceName')]",
     "appDomain": "[format('{0}.azurewebsites.net', variables('appName'))]",
-    "appUrl": "[format('https://{0}', variables('appDomain'))]",
-    "frontDoorDomain": "[format('{0}.azurefd.net', variables('appName'))]",
     "hostingPlanName": "[parameters('baseResourceName')]",
     "storageAccountName": "[format('{0}{1}', substring(parameters('baseResourceName'), 0, 11), variables('uniqueHash'))]",
     "appInsightsName": "[parameters('baseResourceName')]",
     "logAnalyticsName": "[parameters('baseResourceName')]",
-    "keyVaultName": "[parameters('baseResourceName')]",
+    "keyVaultName": "[format('{0}{1}', substring(parameters('baseResourceName'), 0, 11), variables('uniqueHash'))]",
     "useFrontDoor": "[equals(parameters('customDomainOption'), 'Azure Front Door')]",
     "frontDoorName": "[parameters('baseResourceName')]",
     "sharedSkus": [
@@ -190,7 +194,7 @@
             },
             {
               "name": "AzureAd:ApplicationIdURI",
-              "value": "[format('api://{0}/{1}', variables('frontDoorDomain'), parameters('appClientId'))]"
+              "value": "[format('api://{0}/{1}', if(variables('useFrontDoor'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('frontDoorName'), variables('frontDoorName')), '2021-06-01').hostName, parameters('customDomainName')), parameters('appClientId'))]"
             },
             {
               "name": "AzureAd:ValidIssuers",
@@ -228,7 +232,7 @@
           "cors": {
             "supportCredentials": true,
             "allowedOrigins": [
-              "[format('https://{0}', variables('frontDoorDomain'))]"
+              "[format('https://{0}', if(variables('useFrontDoor'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('frontDoorName'), variables('frontDoorName')), '2021-06-01').hostName, parameters('customDomainName')))]"
             ]
           },
           "ftpsState": "Disabled",
@@ -246,6 +250,7 @@
         }
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('frontDoorName'), variables('frontDoorName'))]",
         "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
         "[resourceId('Microsoft.OperationalInsights/workspaces', variables('logAnalyticsName'))]"
       ]
@@ -380,33 +385,30 @@
       "condition": "[variables('useFrontDoor')]",
       "type": "Microsoft.Cdn/profiles",
       "apiVersion": "2021-06-01",
-      "name": "[format('{0}Profile', variables('frontDoorName'))]",
+      "name": "[variables('frontDoorName')]",
       "location": "global",
       "sku": {
         "name": "Standard_AzureFrontDoor"
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('appName'))]"
-      ]
+      }
     },
     {
       "condition": "[variables('useFrontDoor')]",
       "type": "Microsoft.Cdn/profiles/afdEndpoints",
       "apiVersion": "2021-06-01",
-      "name": "[format('{0}/{1}', format('{0}Profile', variables('frontDoorName')), variables('frontDoorName'))]",
+      "name": "[format('{0}/{1}', variables('frontDoorName'), variables('frontDoorName'))]",
       "location": "global",
       "properties": {
         "enabledState": "Enabled"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Cdn/profiles', format('{0}Profile', variables('frontDoorName')))]"
+        "[resourceId('Microsoft.Cdn/profiles', variables('frontDoorName'))]"
       ]
     },
     {
       "condition": "[variables('useFrontDoor')]",
       "type": "Microsoft.Cdn/profiles/originGroups",
       "apiVersion": "2021-06-01",
-      "name": "[format('{0}/{1}', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]",
+      "name": "[format('{0}/{1}', variables('frontDoorName'), format('{0}OriginGroup', variables('frontDoorName')))]",
       "properties": {
         "loadBalancingSettings": {
           "sampleSize": 4,
@@ -420,14 +422,14 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Cdn/profiles', format('{0}Profile', variables('frontDoorName')))]"
+        "[resourceId('Microsoft.Cdn/profiles', variables('frontDoorName'))]"
       ]
     },
     {
       "condition": "[variables('useFrontDoor')]",
       "type": "Microsoft.Cdn/profiles/originGroups/origins",
       "apiVersion": "2021-06-01",
-      "name": "[format('{0}/{1}/{2}', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')), format('{0}Origin', variables('frontDoorName')))]",
+      "name": "[format('{0}/{1}/{2}', variables('frontDoorName'), format('{0}OriginGroup', variables('frontDoorName')), format('{0}Origin', variables('frontDoorName')))]",
       "properties": {
         "hostName": "[variables('appDomain')]",
         "httpPort": 80,
@@ -437,17 +439,17 @@
         "weight": 50
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Cdn/profiles/originGroups', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]"
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('frontDoorName'), format('{0}OriginGroup', variables('frontDoorName')))]"
       ]
     },
     {
       "condition": "[variables('useFrontDoor')]",
       "type": "Microsoft.Cdn/profiles/afdEndpoints/routes",
       "apiVersion": "2021-06-01",
-      "name": "[format('{0}/{1}/{2}', format('{0}Profile', variables('frontDoorName')), variables('frontDoorName'), format('{0}Route', variables('frontDoorName')))]",
+      "name": "[format('{0}/{1}/{2}', variables('frontDoorName'), variables('frontDoorName'), format('{0}Route', variables('frontDoorName')))]",
       "properties": {
         "originGroup": {
-          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]"
+          "id": "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('frontDoorName'), format('{0}OriginGroup', variables('frontDoorName')))]"
         },
         "supportedProtocols": [
           "Https"
@@ -460,9 +462,9 @@
         "httpsRedirect": "Enabled"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', format('{0}Profile', variables('frontDoorName')), variables('frontDoorName'))]",
-        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')), format('{0}Origin', variables('frontDoorName')))]",
-        "[resourceId('Microsoft.Cdn/profiles/originGroups', format('{0}Profile', variables('frontDoorName')), format('{0}OriginGroup', variables('frontDoorName')))]"
+        "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('frontDoorName'), variables('frontDoorName'))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups/origins', variables('frontDoorName'), format('{0}OriginGroup', variables('frontDoorName')), format('{0}Origin', variables('frontDoorName')))]",
+        "[resourceId('Microsoft.Cdn/profiles/originGroups', variables('frontDoorName'), format('{0}OriginGroup', variables('frontDoorName')))]"
       ]
     }
   ],
@@ -473,7 +475,7 @@
     },
     "appDomain": {
       "type": "string",
-      "value": "[if(variables('useFrontDoor'), variables('frontDoorDomain'), format('Please create a custom domain name for {0} and use that in the manifest', variables('appDomain')))]"
+      "value": "[if(variables('useFrontDoor'), reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', variables('frontDoorName'), variables('frontDoorName')), '2021-06-01').hostName, format('Please create custom domain name {0} for {1} and use that in the manifest', parameters('customDomainName'), variables('appDomain')))]"
     }
   }
 }

@@ -12,12 +12,15 @@ param appClientId string
 @secure()
 param appClientSecret string
 
-@description('How the app will be hosted on a domain that is not *.azurewebsites.net. Azure Front Door is an easy option that the template can set up automatically, but it comes with ongoing monthly costs. ')
+@description('How the app will be hosted on a domain that is not *.azurewebsites.net. Azure Front Door is an easy option that the template can set up automatically, but it comes with ongoing monthly costs.')
 @allowed([
   'Custom domain name (recommended)'
   'Azure Front Door'
 ])
 param customDomainOption string = 'Azure Front Door'
+
+@description('Custom domain name (if chosen).')
+param customDomainName string
 
 @description('The ID of the tenant to which the app will be deployed.')
 @minLength(1)
@@ -55,13 +58,11 @@ param cacheInterval int = 60
 var uniqueHash = uniqueString(subscription().subscriptionId, resourceGroup().id, baseResourceName)
 var appName = baseResourceName
 var appDomain = '${appName}.azurewebsites.net'
-var appUrl = 'https://${appDomain}'
-var frontDoorDomain = '${appName}.azurefd.net'
 var hostingPlanName = baseResourceName
 var storageAccountName = '${substring(baseResourceName, 0, 11)}${uniqueHash}'
 var appInsightsName = baseResourceName
 var logAnalyticsName = baseResourceName
-var keyVaultName = baseResourceName
+var keyVaultName = '${substring(baseResourceName, 0, 11)}${uniqueHash}'
 var useFrontDoor = (customDomainOption == 'Azure Front Door')
 var frontDoorName = baseResourceName
 var sharedSkus = [
@@ -103,6 +104,7 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
   }
   dependsOn: [
     logAnalyticsWorkspace
+    frontDoorEndpoint
   ]
   properties: {
     serverFarmId: hostingPlan.id
@@ -135,7 +137,7 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
         }
         {
           name: 'AzureAd:ApplicationIdURI'
-          value: 'api://${frontDoorDomain}/${appClientId}'
+          value: 'api://${useFrontDoor ? frontDoorEndpoint.properties.hostName : customDomainName}/${appClientId}'
         }
         {
           name: 'AzureAd:ValidIssuers'
@@ -173,7 +175,7 @@ resource app 'Microsoft.Web/sites@2021-03-01' = {
       cors: {
         supportCredentials: true
         allowedOrigins: [
-          'https://${frontDoorDomain}'
+          'https://${useFrontDoor ? frontDoorEndpoint.properties.hostName : customDomainName}'
         ]
       }
       ftpsState: 'Disabled'
@@ -295,14 +297,11 @@ resource kvSecretStorageConnString 'Microsoft.KeyVault/vaults/secrets@2021-11-01
 }
 
 resource frontDoorProfile 'Microsoft.Cdn/profiles@2021-06-01' = if (useFrontDoor) {
-  name: '${frontDoorName}Profile'
+  name: frontDoorName
   location: 'global'
   sku: {
     name: 'Standard_AzureFrontDoor'
   }
-  dependsOn: [
-    app
-  ]
 }
 
 resource frontDoorEndpoint 'Microsoft.Cdn/profiles/afdEndpoints@2021-06-01' = if (useFrontDoor) {
@@ -367,4 +366,4 @@ resource frontDoorRoute 'Microsoft.Cdn/profiles/afdEndpoints/routes@2021-06-01' 
 }
 
 output appClientId string = appClientId
-output appDomain string = (useFrontDoor ? frontDoorDomain : 'Please create a custom domain name for ${appDomain} and use that in the manifest')
+output appDomain string = (useFrontDoor ? frontDoorEndpoint.properties.hostName : 'Please create custom domain name ${customDomainName} for ${appDomain} and use that in the manifest')
