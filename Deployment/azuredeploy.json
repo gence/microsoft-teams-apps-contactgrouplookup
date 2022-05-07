@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.6.1.6515",
-      "templateHash": "1440913075509874073"
+      "templateHash": "2721787160099649337"
     }
   },
   "parameters": {
@@ -44,7 +44,7 @@
     },
     "customDomainName": {
       "type": "string",
-      "defaultValue": "xyz.com",
+      "defaultValue": "<replace if custom>",
       "metadata": {
         "description": "Custom domain name (if chosen)."
       }

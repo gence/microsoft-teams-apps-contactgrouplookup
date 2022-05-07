@@ -20,7 +20,7 @@ param appClientSecret string
 param customDomainOption string = 'Azure Front Door'
 
 @description('Custom domain name (if chosen).')
-param customDomainName string = 'xyz.com'
+param customDomainName string = '<replace if custom>'
 
 @description('The ID of the tenant to which the app will be deployed.')
 @minLength(1)
