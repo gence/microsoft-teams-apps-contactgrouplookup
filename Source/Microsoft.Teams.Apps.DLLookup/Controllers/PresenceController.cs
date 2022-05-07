@@ -9,8 +9,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
-    using Microsoft.Identity.Client;
+    using Microsoft.Identity.Web;
     using Microsoft.Teams.Apps.DLLookup.Models;
     using Microsoft.Teams.Apps.DLLookup.Repositories;
 
@@ -29,15 +28,11 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// Initializes a new instance of the <see cref="PresenceController"/> class.
         /// </summary>
         /// <param name="presenceDataRepository">Scoped PresenceDataRepository instance used to get presence information.</param>
-        /// <param name="azureAdOptions">Instance of IOptions to read data from application configuration.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="confidentialClientApp">Instance of ConfidentialClientApplication class.</param>
         public PresenceController(
             IPresenceDataRepository presenceDataRepository,
-            IConfidentialClientApplication confidentialClientApp,
-            IOptions<AzureAdOptions> azureAdOptions,
             ILogger<PresenceController> logger)
-            : base(confidentialClientApp, azureAdOptions, logger)
+            : base(logger)
             {
                 this.presenceDataRepository = presenceDataRepository;
                 this.logger = logger;
@@ -50,12 +45,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// <returns>People Presence Data model data filled with presence information.</returns>
         [HttpPost]
         [Route("GetUserPresence")]
+        [AuthorizeForScopes(ScopeKeySection = "DownstreamApi:Scopes")]
         public async Task<IActionResult> GetUserPresenceAsync([FromBody]PeoplePresenceData[] peoplePresenceData)
         {
             try
             {
-                string accessToken = await this.GetAccessTokenAsync();
-                return this.Ok(await this.presenceDataRepository.GetBatchUserPresenceAsync(peoplePresenceData, accessToken));
+                return this.Ok(await this.presenceDataRepository.GetBatchUserPresenceAsync(peoplePresenceData));
             }
             catch (Exception ex)
             {
@@ -71,12 +66,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// <returns><see cref="Task{TResult}"/> Online members count in distribution list.</returns>
         [HttpGet]
         [Route("GetDistributionListMembersOnlineCount")]
+        [AuthorizeForScopes(ScopeKeySection = "DownstreamApi:Scopes")]
         public async Task<IActionResult> GetDistributionListMembersOnlineCountAsync([FromQuery]string groupId)
         {
             try
             {
-                string accessToken = await this.GetAccessTokenAsync();
-                return this.Ok(await this.presenceDataRepository.GetDistributionListMembersOnlineCountAsync(groupId, accessToken));
+                return this.Ok(await this.presenceDataRepository.GetDistributionListMembersOnlineCountAsync(groupId));
             }
             catch (Exception ex)
             {

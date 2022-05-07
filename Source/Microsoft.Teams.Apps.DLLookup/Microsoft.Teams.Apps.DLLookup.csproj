@@ -24,6 +24,8 @@
 		<PackageReference Include="Microsoft.Graph.Core" Version="2.0.8" />
 		<PackageReference Include="Microsoft.Identity.Client" Version="4.43.2" />
 		<PackageReference Include="Microsoft.Identity.Web" Version="1.24.1" />
+		<PackageReference Include="Microsoft.Identity.Web.MicrosoftGraph" Version="1.24.1" />
+		<PackageReference Include="Microsoft.Identity.Web.TokenCache" Version="1.24.1" />
 		<PackageReference Include="Microsoft.TypeScript.MSBuild" Version="4.6.4">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

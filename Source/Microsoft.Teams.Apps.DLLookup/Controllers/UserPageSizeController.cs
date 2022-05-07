@@ -9,8 +9,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
-    using Microsoft.Identity.Client;
     using Microsoft.Teams.Apps.DLLookup.Models;
     using Microsoft.Teams.Apps.DLLookup.Repositories;
 
@@ -28,16 +26,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// <summary>
         /// Initializes a new instance of the <see cref="UserPageSizeController"/> class.
         /// </summary>
-        /// <param name="confidentialClientApp">Instance of ConfidentialClientApplication class.</param>
-        /// <param name="azureAdOptions">Instance of IOptions to read data from application configuration.</param>
         /// <param name="userPageSizeChoiceDataRepository">Singleton UserPageSizeChoiceDataRepository instance used to perform read/store operations for page size.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
         public UserPageSizeController(
             UserPageSizeChoiceDataRepository userPageSizeChoiceDataRepository,
-            IConfidentialClientApplication confidentialClientApp,
-            IOptions<AzureAdOptions> azureAdOptions,
             ILogger<UserPageSizeController> logger)
-            : base(confidentialClientApp, azureAdOptions, logger)
+            : base(logger)
         {
             this.userPageSizeChoiceDataRepository = userPageSizeChoiceDataRepository;
             this.logger = logger;

@@ -4,23 +4,13 @@
 
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.ApplicationInsights.SnapshotCollector;
-using Microsoft.Identity.Client;
 using Microsoft.Teams.Apps.DLLookup.Authentication;
-using Microsoft.Teams.Apps.DLLookup.Helpers;
 using Microsoft.Teams.Apps.DLLookup.Helpers.Extentions;
 using Microsoft.Teams.Apps.DLLookup.Models;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var scopes = builder.Configuration["AzureAd:GraphScope"].Split(new char[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries);
-IConfidentialClientApplication confidentialClientApp = ConfidentialClientApplicationBuilder.Create(builder.Configuration["AzureAd:ClientId"])
-    .WithClientSecret(builder.Configuration["AzureAd:ClientSecret"]).WithTenantId(builder.Configuration["AzureAd:TenantId"])
-    .Build();
-
-builder.Services.AddSingleton<IConfidentialClientApplication>(confidentialClientApp);
 builder.Services.AddDLLookupAuthentication(builder.Configuration);
-builder.Services.AddSingleton<TokenAcquisitionHelper>();
 builder.Services.AddMvc();
 builder.Services.AddSession();
 builder.Services.AddApplicationInsightsTelemetry(options: new ApplicationInsightsServiceOptions { ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"] });
@@ -34,14 +24,6 @@ builder.Services.Configure<StorageOptions>(options =>
 builder.Services.Configure<Microsoft.Teams.Apps.DLLookup.Models.CacheOptions>(options =>
 {
     options.CacheInterval = builder.Configuration.GetValue<int>("CacheInterval");
-});
-
-builder.Services.Configure<AzureAdOptions>(options =>
-{
-    options.ClientId = builder.Configuration["AzureAd:ClientId"];
-    options.ClientSecret = builder.Configuration["AzureAd:ClientSecret"];
-    options.GraphScope = builder.Configuration["AzureAd:GraphScope"];
-    options.TenantId = builder.Configuration["AzureAd:TenantId"];
 });
 
 builder.Services.AddRepositories();

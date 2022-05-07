@@ -24,9 +24,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories.Interfaces
         /// Get collection of distribution list data from MS Graph based on search query.
         /// </summary>
         /// <param name="query">Search query string to filter distribution list based on name.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>A collection of filtered distribution lists based on query.</returns>
-        Task<List<DistributionList>> GetDistributionListsAsync(string query, string accessToken);
+        Task<List<DistributionList>> GetDistributionListsAsync(string query);
 
         /// <summary>
         /// Get collection of user favorite distribution lists from storage.
@@ -61,10 +60,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories.Interfaces
         /// Gets favorite distribution list details using MS graph.
         /// </summary>
         /// <param name="favoriteDistributionListEntities">List of favorite distribution list records.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>A collection of favorite distribution list entities.</returns>
         Task<List<FavoriteDistributionListData>> GetFavoriteDistributionListsFromGraphAsync(
-            IEnumerable<FavoriteDistributionListTableEntity> favoriteDistributionListEntities,
-            string accessToken);
+            IEnumerable<FavoriteDistributionListTableEntity> favoriteDistributionListEntities);
     }
 }

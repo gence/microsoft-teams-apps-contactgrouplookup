@@ -24,10 +24,9 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories.Interfaces
         /// Get list of distribution list members based on group id and user id.
         /// </summary>
         /// <param name="groupId">Distribution list id to filter records.</param>
-        /// <param name="accessToken">Token to access MS graph</param>
         /// <param name="userObjectId">User's Azure AD Id.</param>
         /// <returns>A collection of distribution lists.</returns>
-        Task<List<DistributionListMember>> GetMembersAsync(string groupId, string accessToken, string userObjectId);
+        Task<List<DistributionListMember>> GetMembersAsync(string groupId, string userObjectId);
 
         /// <summary>
         /// Adds user favorite distribution list member to storage.

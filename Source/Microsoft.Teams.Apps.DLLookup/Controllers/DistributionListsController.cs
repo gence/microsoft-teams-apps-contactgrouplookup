@@ -11,8 +11,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
-    using Microsoft.Identity.Client;
+    using Microsoft.Identity.Web;
     using Microsoft.Teams.Apps.DLLookup.Models;
     using Microsoft.Teams.Apps.DLLookup.Repositories;
     using Microsoft.Teams.Apps.DLLookup.Repositories.Interfaces;
@@ -32,15 +31,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// Initializes a new instance of the <see cref="DistributionListsController"/> class.
         /// </summary>
         /// <param name="favoriteDistributionListDataRepository">Scoped favoriteDistributionListDataRepository instance used to read/write Distribution List related operations.</param>
-        /// <param name="azureAdOptions">Instance of IOptions to read data from application configuration.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="confidentialClientApp">Instance of ConfidentialClientApplication class.</param>
+        /// <param name="graphServiceClient">Instance of client to access Microsoft Graph</param>
         public DistributionListsController(
             IFavoriteDistributionListDataRepository favoriteDistributionListDataRepository,
-            IConfidentialClientApplication confidentialClientApp,
-            IOptions<AzureAdOptions> azureAdOptions,
             ILogger<DistributionListsController> logger)
-            : base(confidentialClientApp, azureAdOptions, logger)
+            : base(logger)
         {
             this.favoriteDistributionListDataRepository = favoriteDistributionListDataRepository;
             this.logger = logger;
@@ -53,12 +49,12 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// <returns>A <see cref="Task"/>List of distribution lists information.</returns>
         [HttpGet]
         [Route("getDistributionList")]
+        [AuthorizeForScopes(ScopeKeySection = "DownstreamApi:Scopes")]
         public async Task<IActionResult> GetDistributionListsAsync([FromQuery] string query)
         {
             try
             {
-                string accessToken = await this.GetAccessTokenAsync();
-                return this.Ok(await this.favoriteDistributionListDataRepository.GetDistributionListsAsync(query, accessToken));
+                return this.Ok(await this.favoriteDistributionListDataRepository.GetDistributionListsAsync(query));
             }
             catch (Exception ex)
             {
@@ -77,7 +73,6 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
             List<FavoriteDistributionListData> favoriteDistributionList = new List<FavoriteDistributionListData>();
             try
             {
-                string accessToken = await this.GetAccessTokenAsync();
                 IEnumerable<FavoriteDistributionListTableEntity> favoriteDistributionListEntities = await this.favoriteDistributionListDataRepository
                     .GetFavoriteDistributionListsFromStorageAsync(this.UserObjectId);
 
@@ -85,7 +80,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
                     && favoriteDistributionListEntities.Count() > 0)
                 {
                     favoriteDistributionList = await this.favoriteDistributionListDataRepository
-                        .GetFavoriteDistributionListsFromGraphAsync(favoriteDistributionListEntities, accessToken);
+                        .GetFavoriteDistributionListsFromGraphAsync(favoriteDistributionListEntities);
                 }
 
                 return this.Ok(favoriteDistributionList);

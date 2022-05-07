@@ -10,6 +10,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     using Microsoft.Extensions.Caching.Memory;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Microsoft.Graph;
     using Microsoft.Teams.Apps.DLLookup.Constants;
     using Microsoft.Teams.Apps.DLLookup.Helpers;
     using Microsoft.Teams.Apps.DLLookup.Helpers.Extentions;
@@ -32,17 +33,20 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         private readonly IMemoryCache memoryCache;
         private readonly ILogger<PresenceDataRepository> logger;
         private readonly IOptions<CacheOptions> cacheOptions;
+        private readonly GraphServiceClient graphClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PresenceDataRepository"/> class.
         /// </summary>
         /// <param name="memoryCache">Singleton memory cache object.</param>
         /// <param name="cacheOptions">Singleton instance of cache configuration.</param>
+        /// <param name="graphServiceClient">Instance of Microsoft Graph client.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        public PresenceDataRepository(IMemoryCache memoryCache, IOptions<CacheOptions> cacheOptions, ILogger<PresenceDataRepository> logger)
+        public PresenceDataRepository(IMemoryCache memoryCache, IOptions<CacheOptions> cacheOptions, GraphServiceClient graphServiceClient, ILogger<PresenceDataRepository> logger)
         {
             this.memoryCache = memoryCache;
             this.cacheOptions = cacheOptions;
+            this.graphClient = graphServiceClient;
             this.logger = logger;
         }
 
@@ -50,9 +54,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Get User presence details in a batch.
         /// </summary>
         /// <param name="peoplePresenceData">Array of People Presence Data object used to get presence information.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>People Presence Data model data filled with presence information.</returns>
-        public async Task<List<PeoplePresenceData>> GetBatchUserPresenceAsync(PeoplePresenceData[] peoplePresenceData, string accessToken)
+        public async Task<List<PeoplePresenceData>> GetBatchUserPresenceAsync(PeoplePresenceData[] peoplePresenceData)
         {
             List<PeoplePresenceData> peoplePresenceDataList = new List<PeoplePresenceData>();
             List<PeoplePresenceData> peoplePresenceDataBatchResults = new List<PeoplePresenceData>();
@@ -78,11 +81,10 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
             if (peoplePresenceDataList.Count > 0)
             {
                 var presenceBatches = peoplePresenceDataList.SplitList(BatchSplitCount);
-                GraphUtilityHelper graphClient = new GraphUtilityHelper(accessToken);
 
                 foreach (var presenceBatch in presenceBatches)
                 {
-                    peoplePresenceDataBatchResults.AddRange(await graphClient.GetUserPresenceAsync(presenceBatch, this.logger));
+                    peoplePresenceDataBatchResults.AddRange(await GraphUtilityHelper.GetUserPresenceAsync(presenceBatch, this.graphClient, this.logger));
                 }
             }
             else
@@ -97,15 +99,13 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Gets online members count in a distribution list.
         /// </summary>
         /// <param name="groupId">Distribution list id.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns><see cref="Task{TResult}"/>Online members count in distribution list.</returns>
-        public async Task<int> GetDistributionListMembersOnlineCountAsync(string groupId, string accessToken)
+        public async Task<int> GetDistributionListMembersOnlineCountAsync(string groupId)
         {
             try
             {
                 int onlineMembersCount = 0;
-                GraphUtilityHelper graphClient = new GraphUtilityHelper(accessToken);
-                var members = await this.GetMembersList(groupId, accessToken);
+                var members = await this.GetMembersList(groupId);
 
                 var peoplePresenceDataList = new List<PeoplePresenceData>();
 
@@ -141,7 +141,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
 
                     foreach (var presenceBatch in presenceBatches)
                     {
-                        List<PeoplePresenceData> peoplePresenceResults = await graphClient.GetUserPresenceAsync(presenceBatch, this.logger);
+                        List<PeoplePresenceData> peoplePresenceResults = await GraphUtilityHelper.GetUserPresenceAsync(presenceBatch, this.graphClient, this.logger);
                         for (int i = 0; i < peoplePresenceResults.Count; i++)
                         {
                             this.memoryCache.Set(peoplePresenceResults[i].Id, peoplePresenceResults[i], options);
@@ -170,12 +170,10 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Gets distribution list members using group API.
         /// </summary>
         /// <param name="groupId">Distribution list id to get members list.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>DistributionListMember data model.</returns>
-        private async Task<IEnumerable<DistributionListMember>> GetMembersList(string groupId, string accessToken)
+        private async Task<IEnumerable<DistributionListMember>> GetMembersList(string groupId)
         {
-            GraphUtilityHelper graphClient = new GraphUtilityHelper(accessToken);
-            var dlMemberList = await graphClient.GetMembersListAsync(groupId, this.logger);
+            var dlMemberList = await GraphUtilityHelper.GetMembersListAsync(groupId, this.graphClient, this.logger);
             return dlMemberList;
         }
     }

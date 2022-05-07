@@ -10,6 +10,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Microsoft.Graph;
     using Microsoft.Teams.Apps.DLLookup.Helpers;
     using Microsoft.Teams.Apps.DLLookup.Models;
     using Microsoft.Teams.Apps.DLLookup.Repositories.Interfaces;
@@ -20,19 +21,22 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     public class FavoriteDistributionListMemberDataRepository : FavoriteDistributionListMemberStorageProvider, IFavoriteDistributionListMemberDataRepository
     {
         private readonly ILogger logger;
-        private GraphUtilityHelper graphClient;
+        private readonly GraphServiceClient graphClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FavoriteDistributionListMemberDataRepository"/> class.
         /// </summary>
         /// <param name="storageOptions">A set of key/value application configuration properties for Microsoft Azure Table storage.</param>
+        /// <param name="graphServiceClient">Instance of Microsoft Graph client.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
         public FavoriteDistributionListMemberDataRepository(
             IOptionsMonitor<StorageOptions> storageOptions,
+            GraphServiceClient graphServiceClient,
             ILogger<FavoriteDistributionListDataRepository> logger)
             : base(storageOptions, logger)
         {
             this.logger = logger;
+            this.graphClient = graphServiceClient;
         }
 
         /// <summary>
@@ -57,17 +61,13 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Gets Distribution List members from Graph and table storage.
         /// </summary>
         /// <param name="groupId">Distribution list id to filter records.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <param name="userObjectId">User's Azure Active Directory Id.</param>
         /// <returns>A collection of distribution list members.</returns>
         public async Task<List<DistributionListMember>> GetMembersAsync(
             string groupId,
-            string accessToken,
             string userObjectId)
         {
-            this.graphClient = new GraphUtilityHelper(accessToken);
-
-            List<DistributionListMember> distributionListMemberList = await this.graphClient.GetDistributionListMembersAsync(groupId, this.logger);
+            List<DistributionListMember> distributionListMemberList = await GraphUtilityHelper.GetDistributionListMembersAsync(groupId, this.graphClient, this.logger);
 
             IEnumerable<FavoriteDistributionListMemberTableEntity> favoriteDistributionListMemberEntity = await this.GetFavoriteMembersFromStorageAsync(userObjectId);
             foreach (DistributionListMember member in distributionListMemberList)

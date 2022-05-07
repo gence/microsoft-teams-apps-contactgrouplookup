@@ -10,8 +10,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
-    using Microsoft.Extensions.Options;
-    using Microsoft.Identity.Client;
+    using Microsoft.Identity.Web;
     using Microsoft.Teams.Apps.DLLookup.Models;
     using Microsoft.Teams.Apps.DLLookup.Repositories;
     using Microsoft.Teams.Apps.DLLookup.Repositories.Interfaces;
@@ -31,15 +30,11 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// Initializes a new instance of the <see cref="DistributionListMembersController"/> class.
         /// </summary>
         /// <param name="favoriteDistributionListMemberDataRepository">Scoped FavoriteDistributionListMemberDataRepository instance used to read/write distribution list member related operations.</param>
-        /// <param name="azureAdOptions">Instance of IOptions to read data from application configuration.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
-        /// <param name="confidentialClientApp">Instance of ConfidentialClientApplication class.</param>
         public DistributionListMembersController(
             IFavoriteDistributionListMemberDataRepository favoriteDistributionListMemberDataRepository,
-            IOptions<AzureAdOptions> azureAdOptions,
-            ILogger<DistributionListMembersController> logger,
-            IConfidentialClientApplication confidentialClientApp)
-            : base(confidentialClientApp, azureAdOptions, logger)
+            ILogger<DistributionListMembersController> logger)
+            : base(logger)
         {
             this.favoriteDistributionListMemberDataRepository = favoriteDistributionListMemberDataRepository;
             this.logger = logger;
@@ -51,6 +46,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
         /// <param name="groupId">Distribution list group GUID.</param>
         /// <returns><DistributionListMember>A <see cref="Task"/> list of Distribution List members information.</DistributionListMember></returns>
         [HttpGet]
+        [AuthorizeForScopes(ScopeKeySection = "DownstreamApi:Scopes")]
         public async Task<IActionResult> GetMembersAsync([FromQuery] string groupId)
         {
             try
@@ -60,9 +56,8 @@ namespace Microsoft.Teams.Apps.DLLookup.Controllers
                     return this.BadRequest("Post query data is either null or empty.");
                 }
 
-                string accessToken = await this.GetAccessTokenAsync();
                 List<DistributionListMember> distributionListMembers = await this.favoriteDistributionListMemberDataRepository
-                    .GetMembersAsync(groupId, accessToken, this.UserObjectId);
+                    .GetMembersAsync(groupId, this.UserObjectId);
                 return this.Ok(distributionListMembers);
             }
             catch (Exception ex)

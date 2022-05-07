@@ -10,6 +10,7 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using Microsoft.Graph;
     using Microsoft.Teams.Apps.DLLookup.Helpers;
     using Microsoft.Teams.Apps.DLLookup.Helpers.Extentions;
     using Microsoft.Teams.Apps.DLLookup.Models;
@@ -26,18 +27,22 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// </summary>
         private const int BatchSplitCount = 10;
         private readonly ILogger<FavoriteDistributionListDataRepository> logger;
+        private GraphServiceClient graphClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FavoriteDistributionListDataRepository"/> class.
         /// </summary>
         /// <param name="storageOptions">A set of key/value application configuration properties for Microsoft Azure Table storage.</param>
         /// <param name="logger">Instance to send logs to the Application Insights service.</param>
+        /// <param name="graphServiceClient">Instance of client to access Microsoft Graph.</param>
         public FavoriteDistributionListDataRepository(
             IOptionsMonitor<StorageOptions> storageOptions,
-            ILogger<FavoriteDistributionListDataRepository> logger)
+            ILogger<FavoriteDistributionListDataRepository> logger,
+            GraphServiceClient graphServiceClient)
             : base(storageOptions, logger)
         {
             this.logger = logger;
+            this.graphClient = graphServiceClient;
         }
 
         /// <summary>
@@ -62,37 +67,31 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Gets distribution list data from MS Graph based on search query.
         /// </summary>
         /// <param name="query">Search query used to filter distribution list.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>Distribution lists filtered with search query.</returns>
         public async Task<List<DistributionList>> GetDistributionListsAsync(
-            string query, string accessToken)
+            string query)
         {
-            GraphUtilityHelper graphClient = new GraphUtilityHelper(accessToken);
-            var distributionList = await graphClient.GetDistributionListsAsync(query, this.logger);
-            return distributionList.ToList();
+            var distributionLists = await GraphUtilityHelper.GetDistributionListsAsync(query, this.graphClient, this.logger);
+            return distributionLists.ToList();
         }
 
         /// <summary>
         /// Get favorite distribution list details and members count from Graph.
         /// </summary>
         /// <param name="groupIds">List of Distribution List Ids.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>Count of members in distribution list.</returns>
-        public async Task<List<DistributionList>> GetDistributionListDetailsFromGraphAsync(
-            List<string> groupIds,
-            string accessToken)
+        public async Task<List<DistributionList>> GetDistributionListDetailsFromGraphAsync(List<string> groupIds)
         {
             // MS Graph batch limit is 20
             // refer https://docs.microsoft.com/en-us/graph/known-issues#json-batching to known issues with Microsoft Graph batch APIs
             IEnumerable<List<string>> groupBatches = groupIds.SplitList(BatchSplitCount);
             List<DistributionList> distributionListList = new List<DistributionList>();
-            GraphUtilityHelper graphClient = new GraphUtilityHelper(accessToken);
 
             foreach (List<string> groupBatch in groupBatches)
             {
                 try
                 {
-                    distributionListList.AddRange(await graphClient.GetDistributionListDetailsAsync(groupBatch, this.logger));
+                    distributionListList.AddRange(await GraphUtilityHelper.GetDistributionListDetailsAsync(groupBatch, this.graphClient, this.logger));
                 }
                 catch (Exception ex)
                 {
@@ -107,16 +106,14 @@ namespace Microsoft.Teams.Apps.DLLookup.Repositories
         /// Gets favorite Distribution List details from Graph.
         /// </summary>
         /// <param name="favoriteDistributionListEntities">Favorite Distribution List data from storage.</param>
-        /// <param name="accessToken">Token to access MS graph.</param>
         /// <returns>Favorite distribution list data from graph.</returns>
         public async Task<List<FavoriteDistributionListData>> GetFavoriteDistributionListsFromGraphAsync(
-            IEnumerable<FavoriteDistributionListTableEntity> favoriteDistributionListEntities,
-            string accessToken)
+            IEnumerable<FavoriteDistributionListTableEntity> favoriteDistributionListEntities)
         {
             List<FavoriteDistributionListData> favoriteDistributionList = new List<FavoriteDistributionListData>();
 
             List<string> groupIds = favoriteDistributionListEntities.Select(dl => dl.GroupId).ToList();
-            List<DistributionList> distributionList = await this.GetDistributionListDetailsFromGraphAsync(groupIds, accessToken);
+            List<DistributionList> distributionList = await this.GetDistributionListDetailsFromGraphAsync(groupIds);
 
             foreach (FavoriteDistributionListTableEntity currentItem in favoriteDistributionListEntities)
             {
