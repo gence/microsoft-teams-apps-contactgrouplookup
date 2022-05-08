@@ -24,7 +24,7 @@ export const AppRoute: React.FunctionComponent<{}> = () => {
                 <Switch>
                     <Route exact path="/dls" render={(props) => <DistributionLists {...props} getFavoriteDistributionLists={getFavoriteDistributionLists} getDistributionListMembersOnlineCount={getDistributionListMembersOnlineCount} getUserPageSizeChoice={getUserPageSizeChoice} createUserPageSizeChoice={createUserPageSizeChoice} getClientId={getClientId} />} />
                     <Route exact path="/dlmemberlist/:id/:name" render={(props) => <DistributionListMembers {...props} parentDlId={props.match.params.id} parentDLName={props.match.params.name} getDistributionListsMembers={getDistributionListsMembers} pinStatusUpdate={pinStatusUpdate} getUserPresence={getUserPresence} getUserPageSizeChoice={getUserPageSizeChoice} createUserPageSizeChoice={createUserPageSizeChoice} />} />
-                    <Route exact path="/adfavorite/:isskypedl?" render={(props) => <AddDistributionList {...props} getADDistributionLists={getADDistributionLists} createFavoriteDistributionList={createFavoriteDistributionList} />} />
+                    <Route exact path="/addfavorite/:isskypedl?" render={(props) => <AddDistributionList {...props} getADDistributionLists={getADDistributionLists} createFavoriteDistributionList={createFavoriteDistributionList} />} />
                     <Route exact path="/groupchatwarning/:count" render={(props) => <GroupChatWarning {...props} chatListCount={props.match.params.count} />} />
                     <Route exact path="/errorpage" component={ErrorPage} />
                     <Route exact path="/errorpage/:id" component={ErrorPage} />
